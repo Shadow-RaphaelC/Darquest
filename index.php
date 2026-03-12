@@ -10,6 +10,7 @@ require_once 'BD/bd.php';
     <title>DarQuest</title>
 </head>
 <body>
+<?php include 'include/header.php'; ?>
     <h1>Hello World</h1>
 </body>
 </html>
