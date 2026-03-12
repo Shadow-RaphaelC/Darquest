@@ -1,3 +1,9 @@
 /* CSS Par defaut pour le site */
 
 /* >-- HEADER --< */ 
+.header {
+    background-color: #1d1830;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+}
