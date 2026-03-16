@@ -1,6 +1,6 @@
 <header>
     <div class="headerLogo">
-        <img style="height: 200px;" src="img/DarQuestTitle_WHITE.png" alt="DarQuest Logo" class="logo">
+        <img style="height: 220px;" src="img/DarQuestTitle_WHITE.png" alt="DarQuest Logo" class="logo">
     </div>
     <div class="separatorBox">
         <img src="img/sep/qq_01_01.png" alt="logoLeft" class="sep">

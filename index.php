@@ -10,11 +10,18 @@ require_once 'BD/bd.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/styles_dark.css">
     <title>DarQuest</title>
+
+    <?php require 'include/header.php'; ?>
 </head>
 
 <body>
-    <?php require 'include/header.php'; ?>
-    <h1>imagine une page shop. tu vois des produits. c'est vraiment beau. la page est magnifique</h1>
+    <div class="btnBox">
+        <a class="btnEnigma" href="#"> Engima </a>
+    </div>
+    <div style="justify-content: space-evenly; padding-left: 100px; padding-right: 100px;" class="btnBox">
+        <a class="btnAutre" href="#"> Autre </a>
+        <a class="btnAutre" href="#"> Autre </a>
+    </div>
 </body>
 
 </html>

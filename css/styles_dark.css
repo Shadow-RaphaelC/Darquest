@@ -1,6 +1,10 @@
 /* CSS Par defaut pour le site */
 
 body {
+    background-image: url('../img/background.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+
     background-color: #151521;
     color: rgb(255, 255, 255);
     padding: 10px 20px;
@@ -13,12 +17,14 @@ body {
     align-items: center;
     justify-content: center;
     margin-bottom: -30px;
+    margin-top: -30px;
 }
 
 .separatorBox {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-wrap: nowrap;
 }
 
 .sep {
@@ -39,3 +45,58 @@ body {
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s;
 }
+
+.headerBtn:hover {
+    background-color: #fff;
+    color: #151521;
+}
+
+/* >-- ACCEUIL --< */
+
+.btnBox {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.btnEnigma {
+    background-color: rgba(255, 255, 255, 0.50);
+    width: 1420px;
+    height: 120px;
+    margin-top: 200px;
+    text-align: center;
+    line-height: 120px;
+    font-size: 24px;
+    font-variant: small-caps;
+    border: 2px solid #fff;
+    color: #fff;
+    text-decoration: none;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.btnAutre {
+    background-color: rgba(255, 255, 255, 0.50);
+    width: 440px;
+    height: 90px;
+    margin-top: 20px;
+    text-align: center;
+    line-height: 120px;
+    font-size: 24px;
+    font-variant: small-caps;
+    border: 2px solid #fff;
+    color: #fff;
+    text-decoration: none;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.btnEnigma:hover {
+    background-color: rgba(255, 255, 255, 0.7);
+    color: #151521;
+}
+
+.btnAutre:hover {
+    background-color: rgba(255, 255, 255, 0.7);
+    color: #151521;
+}
+
+/* >-- SHOP --< */
