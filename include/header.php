@@ -20,9 +20,17 @@
         <img src="img/sep/qq_01_02.png" alt="logoCenter" class="sep">
         <img src="img/sep/qq_01_03.png" alt="logoRight" class="sep">
     </div>
-    <nav class="headerNav">
-        <a class="headerBtn" href="#">Home</a>
-        <a class="headerBtn">Coins</a>
-        <a class="headerBtn" href="#">Profile</a>
-    </nav>
+    <div class="headerBox">
+        <nav class="headerNavButSpecificallyForHomeButton">
+            <a class="headerBtn" href="#">Home</a>
+        </nav>
+        <nav class="headerNav">
+            <div class="coins">
+                <a class="bronze">1000</a>
+                <a class="silver">1000</a>
+                <a class="gold">1000</a>
+            </div>
+            <a class="headerBtn" href="#">Profile</a>
+        </nav>
+    </div>
 </header>

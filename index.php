@@ -19,7 +19,7 @@ require_once 'BD/bd.php';
         <a class="btnEnigma" href="#"> Engima </a>
     </div>
     <div style="justify-content: space-evenly; padding-left: 100px; padding-right: 100px;" class="btnBox">
-        <a class="btnAutre" href="#"> Autre </a>
+        <a class="btnAutre" href=""> Autre </a>
         <a class="btnAutre" href="#"> Autre </a>
     </div>
 </body>

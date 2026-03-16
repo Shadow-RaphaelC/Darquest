@@ -31,9 +31,23 @@ body {
     height: 70px;
 }
 
+.headerBox {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    max-width: 1920px;
+    height: auto;
+    margin: 0 auto;
+}
+
+.headerNavButSpecificallyForHomeButton { /* funny */
+    display: flex;
+    justify-content: left;
+}
+
 .headerNav {
     display: flex;
-    justify-content: space-around;
+    justify-content: right;
 }
 
 .headerBtn {
@@ -51,12 +65,49 @@ body {
     color: #151521;
 }
 
+/* --------------- */
+.coins {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+
+}
+
+.bronze {   
+    color: #cd7f32;
+    background-color: rgba(205, 127, 50, 0.2);
+    border: 2px solid #cd7f32;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+}
+
+.silver {
+    color: #c0c0c0;
+    background-color: rgba(192, 192, 192, 0.2);
+    border: 2px solid #c0c0c0;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+
+}
+
+.gold {
+    color: #ffd700;
+    background-color: rgba(255, 215, 0, 0.2);
+    border: 2px solid #ffd700;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+}
+
 /* >-- ACCEUIL --< */
 
 .btnBox {
     display: flex;
     flex-direction: row;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
 .btnEnigma {
