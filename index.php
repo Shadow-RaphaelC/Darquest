@@ -14,7 +14,7 @@ require_once 'BD/bd.php';
 
 <body>
 
-    <?php include 'include/header.php'; ?>
+    <?php require 'include/header.php'; ?>
 
     <h1>Hello World !!</h1>
     <button class="textTest">Test</button>
