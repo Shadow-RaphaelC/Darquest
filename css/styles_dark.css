@@ -7,3 +7,9 @@
     padding: 10px 20px;
     text-align: center;
 }
+
+.textTest {
+    color: red;
+    font-size: 35px;
+    font-weight: bold;
+}

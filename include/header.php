@@ -3,7 +3,7 @@
         <img src="img/DarQuestTitle_WHITE.png" alt="DarQuest Logo" class="logo">
         <nav>
             <ul>
-                <li><a href="index.php">Home</a></li>
+                <li><a class="textTest" href="index.php">Home</a></li>
             </ul>
         </nav>
     </div>
