@@ -1,15 +1,16 @@
 /* CSS Par defaut pour le site */
 
-/* >-- HEADER --< */ 
-.header {
+body {
     background-color: #1d1830;
-    color: white;
+    color: rgb(255, 0, 0);
     padding: 10px 20px;
     text-align: center;
 }
 
-.textTest {
-    color: red;
-    font-size: 35px;
-    font-weight: bold;
+/* >-- HEADER --< */ 
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
 }
