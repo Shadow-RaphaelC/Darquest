@@ -1,16 +1,41 @@
 /* CSS Par defaut pour le site */
 
 body {
-    background-color: #1d1830;
-    color: rgb(255, 0, 0);
+    background-color: #151521;
+    color: rgb(255, 255, 255);
     padding: 10px 20px;
     text-align: center;
 }
 
 /* >-- HEADER --< */ 
-.header {
+.headerLogo {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    margin-bottom: -30px;
+}
+
+.separatorBox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sep {
+    height: 70px;
+}
+
+.headerNav {
+    display: flex;
+    justify-content: space-around;
+}
+
+.headerBtn {
+    background-color: transparent;
+    border: 2px solid #fff;
+    color: #fff;
     padding: 10px 20px;
+    margin: 0 10px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
 }

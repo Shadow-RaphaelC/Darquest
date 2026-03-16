@@ -13,12 +13,8 @@ require_once 'BD/bd.php';
 </head>
 
 <body>
-
     <?php require 'include/header.php'; ?>
-
-    <h1>Hello World !!</h1>
-    <button class="textTest">Test</button>
-
+    <h1>imagine une page shop. tu vois des produits. c'est vraiment beau. la page est magnifique</h1>
 </body>
 
 </html>
