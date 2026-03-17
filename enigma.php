@@ -10,11 +10,10 @@ require_once 'BD/bd.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/styles_dark.css">
     <title>DarQuest Enigma</title>
-
-    <?php require 'include/header.php'; ?>
 </head>
 
 <body>
+    <?php require 'include/header.php'; ?>
     <main>
         <h1>Enigma</h1>
         <p>Page Enigma.</p>
