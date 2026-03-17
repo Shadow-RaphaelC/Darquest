@@ -18,6 +18,9 @@ require_once 'BD/bd.php';
     <main>
         <h1>Profil</h1>
         <p>Votre profil.</p>
+        <div class="btnBox" style="justify-content: center; gap: 20px;">
+            <a class="btnAutre" href="index.php">Retour à l'accueil</a>
+        </div>
     </main>
     <?php require 'include/footer.php'; ?>
 </body>

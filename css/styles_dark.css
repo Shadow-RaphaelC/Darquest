@@ -11,7 +11,11 @@ body {
     text-align: center;
 }
 
-/* >-- HEADER --< */ 
+main {
+    margin-top: 20px;
+}
+
+/* >-- HEADER --< */
 .headerLogo {
     display: flex;
     align-items: center;
@@ -40,7 +44,7 @@ body {
     margin: 0 auto;
 }
 
-.headerNavButSpecificallyForHomeButton { /* funny */
+.headerNavButSpecificallyForHomeButton {
     display: flex;
     justify-content: left;
 }
@@ -63,6 +67,244 @@ body {
 .headerBtn:hover {
     background-color: #fff;
     color: #151521;
+}
+
+.coins {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+}
+
+.bronze {
+    color: #cd7f32;
+    background-color: rgba(205, 127, 50, 0.2);
+    border: 2px solid #cd7f32;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+}
+
+.silver {
+    color: #c0c0c0;
+    background-color: rgba(192, 192, 192, 0.2);
+    border: 2px solid #c0c0c0;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+}
+
+.gold {
+    color: #ffd700;
+    background-color: rgba(255, 215, 0, 0.2);
+    border: 2px solid #ffd700;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+}
+
+.headerLogo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: -30px;
+    margin-top: -30px;
+}
+
+.separatorBox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.sep {
+    height: 70px;
+}
+
+.headerBox {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    max-width: 1920px;
+    height: auto;
+    margin: 0 auto;
+}
+
+.headerNavButSpecificallyForHomeButton {
+    display: flex;
+    justify-content: left;
+}
+
+.headerNav {
+    display: flex;
+    justify-content: right;
+}
+
+.headerBtn {
+    background-color: transparent;
+    border: 2px solid #fff;
+    color: #fff;
+    padding: 10px 20px;
+    margin: 0 10px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.headerBtn:hover {
+    background-color: #fff;
+    color: #151521;
+}
+
+.coins {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+}
+
+.bronze {
+    color: #cd7f32;
+    background-color: rgba(205, 127, 50, 0.2);
+    border: 2px solid #cd7f32;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+}
+
+.silver {
+    color: #c0c0c0;
+    background-color: rgba(192, 192, 192, 0.2);
+    border: 2px solid #c0c0c0;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+}
+
+.gold {
+    color: #ffd700;
+    background-color: rgba(255, 215, 0, 0.2);
+    border: 2px solid #ffd700;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+}
+
+.user-profile {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 200px 20px 20px 200px;
+    padding: 6px 11px;
+    backdrop-filter: blur(6px);
+    color: #fff;
+    text-decoration: none;
+}
+
+.user-name {
+    margin-right: 8px;
+    font-weight: 500;
+}
+
+.user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.headerLogo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+    margin-top: 0;
+}
+
+.separatorBox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.sep {
+    height: 70px;
+}
+
+.headerBox {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    max-width: 1920px;
+    height: auto;
+    margin: 0 auto;
+}
+
+.headerNavButSpecificallyForHomeButton { 
+    display: flex;
+    justify-content: left;
+}
+
+.headerNav {
+    display: flex;
+    justify-content: right;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.auth-btn {
+    background-color: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    padding: 8px 16px;
+    border-radius: 10px;
+}
+
+.user-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px 16px 16px 6px;
+    padding: 6px 10px;
+    text-decoration: none;
+    color: #fff;
+}
+
+.user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-name {
+    font-size: 0.9rem;
+}
+
+.headerBtn {
+    background-color: transparent;
+    border: 2px solid #fff;
+    color: #fff;
+    padding: 10px 20px;
+    margin: 0 10px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.headerBtn:hover {
+    background-color: #fff;
+    color: #151521;
+}
+
+.headerBtn.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 /* --------------- */
@@ -110,6 +352,49 @@ body {
     flex-wrap: wrap;
 }
 
+.btnBox {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btnEnigma {
+    background-color: rgba(255, 255, 255, 0.50);
+    width: 1420px;
+    height: 120px;
+    margin-top: 200px;
+    text-align: center;
+    line-height: 120px;
+    font-size: 24px;
+    font-variant: small-caps;
+    border: 2px solid #fff;
+    color: #fff;
+    text-decoration: none;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.btnAutre {
+    background-color: rgba(255, 255, 255, 0.50);
+    width: 440px;
+    height: 90px;
+    margin-top: 20px;
+    text-align: center;
+    line-height: 120px;
+    font-size: 24px;
+    font-variant: small-caps;
+    border: 2px solid #fff;
+    color: #fff;
+    text-decoration: none;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.btnEnigma:hover,
+.btnAutre:hover {
+    background-color: rgba(255, 255, 255, 0.7);
+    color: #151521;
+}
+
 .btnEnigma {
     background-color: rgba(255, 255, 255, 0.50);
     width: 1420px;
@@ -154,16 +439,22 @@ body {
 
 /* >-- ITEM --< */
 .itemBox {
-    width: 500px;
-    background: white;
+    width: 100%;
+    max-width: 500px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 14px;
     overflow: hidden;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
 }
 
 .item-img {
-    border-top: 15px solid white;
-    width: 90%;
-    height: 400px;
+    border-top: 15px solid rgba(255, 255, 255, 0.15);
+    width: 100%;
+    height: 320px;
     object-fit: cover;
+    filter: saturate(1.1);
 }
 
 .item-info {
