@@ -1,16 +1,13 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    if (!headers_sent()) {
+        session_start();
+    }
 }
 $currentPage = basename($_SERVER['SCRIPT_NAME']);
 $loggedIn = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
 $userName = $loggedIn ? ($_SESSION['username'] ?? 'Joueur') : 'Invité';
 
-function navLink($href, $label, $enabled = true) {
-    $class = $enabled ? 'headerBtn' : 'headerBtn locked';
-    $hrefOut = $enabled ? $href : '#';
-    return "<a class=\"$class\" href=\"$hrefOut\">$label</a>";
-}
 ?>
 <header>
     <div class="headerLogo">
@@ -35,15 +32,6 @@ function navLink($href, $label, $enabled = true) {
         <img src="img/sep/qq_01_03.png" alt="logoRight" class="sep">
     </div>
     <div class="headerBox">
-        <nav class="headerNavButSpecificallyForHomeButton">
-            <?php echo navLink('index.php', 'Accueil'); ?>
-            <?php echo navLink('magasin.php', 'Magasin'); ?>
-            <?php echo navLink('enigma.php', 'Enigma'); ?>
-            <?php echo navLink('panier.php', 'Panier', $loggedIn); ?>
-            <?php echo navLink('inventaire.php', 'Inventaire', $loggedIn); ?>
-            <?php echo navLink('profil.php', 'Profil', $loggedIn); ?>
-            <?php echo navLink('admin.php', 'Admin', $loggedIn); ?>
-        </nav>
         <nav class="headerNav">
             <div class="coins">
                 <a class="bronze">1000</a>
