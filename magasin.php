@@ -19,6 +19,7 @@ require_once 'BD/bd.php';
         <h1>Magasin</h1>
         <p>Bienvenue dans le magasin.</p>
     </main>
+    <?php require 'include/footer.php'; ?>
 </body>
 
 </html>

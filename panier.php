@@ -19,6 +19,4 @@ require_once 'BD/bd.php';
  <h1>Panier</h1>
  <p>Votre panier est vide.</p>
  </main>
-</body>
-
-</html>
+    <?php require 'include/footer.php'; ?>

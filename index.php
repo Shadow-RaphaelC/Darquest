@@ -22,6 +22,7 @@ require_once 'BD/bd.php';
         <a class="btnAutre" href=""> Autre </a>
         <a class="btnAutre" href="#"> Autre </a>
     </div>
+    <?php require 'include/footer.php'; ?>
 </body>
 
 </html>

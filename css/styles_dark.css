@@ -218,4 +218,28 @@ body {
     height: 70px;
 
     object-fit: contain;
+}/* >-- FOOTER --< */
+.site-footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.45);
+    color: #ffffff;
+    padding: 10px 0;
+    text-align: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+.site-footer-content {
+    max-width: 1200px;
+    margin: auto;
+}
+.site-footer p {
+    margin: 4px 0;
+    font-size: 14px;
+}
+.site-footer .footer-subtext {
+    font-size: 12px;
+    opacity: 0.85;
 }

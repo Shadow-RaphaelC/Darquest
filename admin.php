@@ -19,6 +19,7 @@ require_once 'BD/bd.php';
         <h1>Admin</h1>
         <p>Panneau d'administration.</p>
     </main>
+    <?php require 'include/footer.php'; ?>
 </body>
 
 </html>

@@ -19,6 +19,7 @@ require_once 'BD/bd.php';
         <h1>Enigma</h1>
         <p>Page Enigma.</p>
     </main>
+    <?php require 'include/footer.php'; ?>
 </body>
 
 </html>
