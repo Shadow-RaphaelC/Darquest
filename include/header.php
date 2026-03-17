@@ -25,12 +25,15 @@
             <a class="headerBtn" href="#">Home</a>
         </nav>
         <nav class="headerNav">
+            <a class="headerBtn" href="#">Panier</a>
             <div class="coins">
                 <a class="bronze">1000</a>
                 <a class="silver">1000</a>
                 <a class="gold">1000</a>
             </div>
             <a class="headerBtn" href="#">Profile</a>
+            <a class="headerBtn" href="#">Connexion</a>
+            <a class="headerBtn" href="#">Inscription</a>
         </nav>
     </div>
 </header>
