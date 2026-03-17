@@ -218,7 +218,72 @@ body {
     height: 70px;
 
     object-fit: contain;
-}/* >-- FOOTER --< */
+}
+
+
+.item-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(220px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.item-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.item-grid-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 20px;
+}
+
+
+.panier-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    padding: 20px;
+}
+
+.panier-items {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.panier-recap {
+    background: rgba(20, 20, 35, 0.75);
+    border: 1px solid #fff;
+    border-radius: 10px;
+    padding: 20px;
+    color: #fff;
+    min-height: 220px;
+}
+
+.panier-recap h2 {
+    margin-top: 0;
+}
+
+.btnPanierBtn {
+    display: inline-block;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid #fff;
+    color: #fff;
+    padding: 8px 14px;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 6px;
+}
+
+.btnPanierBtn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
 .site-footer {
     position: fixed;
     left: 0;
