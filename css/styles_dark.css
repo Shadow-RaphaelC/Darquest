@@ -1,5 +1,9 @@
 /* CSS Par defaut pour le site */
 
+div {
+    border: 2px solid red;
+}
+
 html,
 body {
     margin: 0;
