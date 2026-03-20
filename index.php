@@ -1,15 +1,36 @@
 <?php
+require_once 'include/session.php';
 require_once 'BD/bd.php';
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <link rel="stylesheet" href="css/styles_dark.css">
+    <title>DarQuest</title>
 </head>
+
 <body>
-    <h1>Hello World</h1>
+    <?php require 'include/header.php'; ?>
+    <main>
+        <div class="btnBox">
+            <a class="btnMain" href="magasin.php">Magasin</a>
+        </div>
+        <div class="btnBox">
+            <a class="btnMain" href="enigma.php">Enigma</a>
+        </div>
+        <div style="justify-content: space-evenly; padding-left: 100px; padding-right: 100px;" class="btnBox">
+            <?php
+                $locked = (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) ? ' headerBtn locked' : '';
+            ?>
+            <a class="btnAutre<?php echo $locked; ?>" href="panier.php">Panier</a>
+            <a class="btnAutre<?php echo $locked; ?>" href="inventaire.php">Inventaire</a>
+        </div>
+    </main>
+    <?php require 'include/footer.php'; ?>
 </body>
+
 </html>

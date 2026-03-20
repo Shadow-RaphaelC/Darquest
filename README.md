@@ -6,26 +6,23 @@ Le client souhaite avoir une application web intitulée Darquest qui permet d’
 ## Team
 Raphael - Repo Setup, Infrastructure, Developer
 Mathis - Infrastructure, Developer
-Goufril - Developer
-Vincent - Developer
+Goufril - UI, Developer
+Vincent - Backend, Developer
 
 ## Technologies
-- Languages: SQL / HTML / CSS
-- Database:
-- Tools:
+- Languages: SQL / HTML / CSS / JavaScript / PHP
+- Database: Darquest DB
+- Tools: Visual Studio Code / Github Desktop / 
 
 ## Branching Strategy
 main → stable version
 dev → development
-feature/* → individual work branches
 
 ## Workflow
 1. Pull the latest dev branch
-2. Create a feature branch from dev
-3. Work and commit changes
-4. Push the feature branch
-5. Create a Pull Request into dev
-6. After testing, dev will be merged into main
+2. Work and commit changes
+3. Push the feature branch
+4. After testing, dev will be merged into main
    
 ## Sprint Information
 Optionel: (https://educlgqc-my.sharepoint.com/:w:/g/personal/202286775_edu_clg_qc_ca/IQBJ7xnfyEVvT5EcBu20FbCzAdRvwV0LbViTxf-MpFHq8L4?e=ijYCGo)
