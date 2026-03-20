@@ -17,10 +17,10 @@ require_once 'BD/bd.php';
     <?php require 'include/header.php'; ?>
     <main>
         <div class="btnBox">
-            <a class="btnEnigma" href="magasin.php">Magasin</a>
+            <a class="btnMain" href="magasin.php">Magasin</a>
         </div>
         <div class="btnBox">
-            <a class="btnEnigma" href="enigma.php">Enigma</a>
+            <a class="btnMain" href="enigma.php">Enigma</a>
         </div>
         <div style="justify-content: space-evenly; padding-left: 100px; padding-right: 100px;" class="btnBox">
             <?php

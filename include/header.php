@@ -39,7 +39,7 @@ $userName = $loggedIn ? ($_SESSION['username'] ?? 'Joueur') : 'Invité';
                 <a class="gold">1000</a>
             </div>
             <?php if (in_array($currentPage, ['index.php', 'magasin.php'])): ?>
-                <a class="headerBtn" href="#">Connexion / Inscription</a>
+                <button class="headerBtn" id="openAuthModalBtn" type="button">Connexion / Inscription</button>
             <?php endif; ?>
             <div class="user-profile">
                 <span class="user-name"><?php echo htmlspecialchars($userName, ENT_QUOTES, 'UTF-8'); ?></span>
@@ -48,3 +48,26 @@ $userName = $loggedIn ? ($_SESSION['username'] ?? 'Joueur') : 'Invité';
         </nav>
     </div>
 </header>
+<div class="modal-overlay" id="authModalOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+        <button class="modal-close" id="closeAuthModalBtn" aria-label="Fermer la fenêtre">×</button>
+        <h2 id="authModalTitle">Connexion</h2>
+
+        <form id="authForm" class="auth-form" novalidate>
+            <div class="form-field">
+                <label for="authUser">Email ou alias</label>
+                <input type="text" id="authUser" name="authUser" required>
+            </div>
+            <div class="form-field">
+                <label for="authPassword">Mot de passe</label>
+                <input type="password" id="authPassword" name="authPassword" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Se connecter</button>
+                <button type="button" class="link-button" id="forgotPasswordBtn">Mot de passe oublié ?</button>
+            </div>
+        </form>
+
+        <p class="toggle-text">Pas encore de compte ? <button type="button" class="link-button" id="switchToSignUp">Inscription</button></p>
+    </div>
+</div>

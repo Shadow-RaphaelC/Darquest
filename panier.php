@@ -31,12 +31,6 @@ require_once 'BD/bd.php';
             <a class="btnAutre" href="index.php">Accueil</a>
         </div>
         <?php
-        require_once 'item.php';
-
-        $cart_items = [
-            [201, 'Overlord\'s bloodmail', 'Armure mythique', 120.00, 'img/placeholder.webp'],
-            [202, 'Arc de l\'aube', 'Dégâts à distance +40', 110.00, 'img/placeholder.webp'],
-        ];
 
         $subtotal = 0;
         foreach ($cart_items as $ci) {
@@ -48,10 +42,18 @@ require_once 'BD/bd.php';
 
         <div class="panier-layout">
             <div class="panier-items">
-                <?php foreach ($cart_items as $ci) :
-                    render_item_card($ci[0], $ci[1], $ci[2], number_format($ci[3], 2) . ' gold', $ci[4]);
-                endforeach;
-                ?>
+                <?php foreach ($products as $p) :
+                render_item_card(
+                    $p[0] ?? null,
+                    $p[1] ?? '',
+                    $p[2] ?? 0,
+                    $p[3] ?? '',
+                    isset($p[4]) ? $p[4] : 0,
+                    $p[5] ?? '',
+                    $p[6] ?? true
+                );
+            endforeach;
+            ?>
             </div>
             <div class="panier-recap">
                 <h2>Récapitulatif du panier</h2>

@@ -20,27 +20,28 @@ require_once 'BD/bd.php';
         <p>Bienvenue dans le magasin.</p>
 
         <?php
-        require_once 'item.php';
+        $products = AfficherItems();
 
-        $products = [
-            [1, 'Overlord\'s bloodmail', 'Armure mythique, +120 vie', '120', 'img/placeholder.webp'],
-            [2, 'Bottes du vent', 'Augmente la vitesse de déplacement', '75', 'img/placeholder.webp'],
-            [3, 'Arc de l\'aube', '+40 de dégâts à distance', '110', 'img/placeholder.webp'],
-            [4, 'Casque du dragon', 'Réduit les dégâts subis de 8%', '95', 'img/placeholder.webp'],
-            [5, 'Gantelets runiques', '+20 force', '80', 'img/placeholder.webp'],
-            [6, 'Cape spectrale', 'Immunité aux effets de peur', '130', 'img/placeholder.webp'],
-            [7, 'Bague de vie', '+50 PV', '60', 'img/placeholder.webp'],
-            [8, 'Potion Zen', 'Restaure 150 PV', '25', 'img/placeholder.webp'],
-            [9, 'Sceptre du chaos', '+70 magie', '140', 'img/placeholder.webp'],
-            [10, 'Grelot de l\'ombre', '+25 invisibilité', '90', 'img/placeholder.webp'],
-            [11, 'Pierre d\'énergie', 'Recharge les sorts 30% plus vite', '105', 'img/placeholder.webp'],
-            [12, 'Bouclier éthéré', '+55 défense', '115', 'img/placeholder.webp'],
-        ];
+        if (!is_array($products)) {
+            $products = [];
+        }
         ?>
 
         <div class="item-grid-4">
             <?php foreach ($products as $p) :
-                render_item_card($p[0], $p[1], $p[2], $p[3] . ' gold', $p[4]);
+                $id = $p[0] ?? null;
+                $nom = $p[1] ?? '';
+                $quantity = $p[2] ?? 0;
+                $typeItem = $p[3] ?? '';
+                $price = $p[4] ?? 0;
+                $image = $p[5] ?? '';
+                $isDisponible = $p[6] ?? true;
+
+                // If quantity looks like price (e.g. 000000...19), prefer actual numeric parse.
+                $quantity = (int)$quantity;
+                $price = (int)$price;
+
+                render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDisponible);
             endforeach;
             ?>
         </div>

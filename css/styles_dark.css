@@ -143,6 +143,7 @@ main {
 .headerNavButSpecificallyForHomeButton {
     display: flex;
     justify-content: left;
+    gap: 6px;
 }
 
 .headerNav {
@@ -362,18 +363,11 @@ main {
     flex-wrap: wrap;
 }
 
-.btnBox {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.btnEnigma {
+.btnMain {
     background-color: rgba(255, 255, 255, 0.50);
     width: 1420px;
     height: 120px;
-    margin-top: 200px;
+    margin: 50px auto 20px auto;
     text-align: center;
     line-height: 120px;
     font-size: 24px;
@@ -464,67 +458,89 @@ main {
 .itemBox {
     width: 100%;
     max-width: 500px;
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(18, 18, 18, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.23);
     border-radius: 14px;
     overflow: hidden;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.40);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.itemBox:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.48);
+}
+
+.item-img-wrapper {
+    width: 100%;
+    height: 300px;
+    background: #151515;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
 .item-img {
-    border-top: 15px solid rgba(255, 255, 255, 0.15);
-    width: 100%;
-    height: 320px;
-    object-fit: cover;
-    filter: saturate(1.1);
+    width: auto;
+    height: auto;
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    filter: saturate(1.05);
+    transform: scale(1.3);
+    transition: transform 0.25s ease;
+}
+
+.item-img:hover {
+    transform: scale(1.5);
 }
 
 .item-info {
-    padding: 15px;
-}
-
-.prixBronze {
-    color: #cd7f32;
-    margin: 0;
-    font-size: 45px;
-
-}
-
-.prixSilver {
-    color: #c0c0c0;
-    margin: 0;
-    font-size: 45px;
+    padding: 18px;
 }
 
 .prixOr {
     color: #ffd700;
-    margin: 0;
-    font-size: 45px;
-
-    background-color: rgba(41, 41, 41, 0.466);
-;
+    margin: 8px 0 0 0;
+    font-size: 2.05rem;
+    font-weight: 700;
 }
 
 .titre {
-    color: black;
-    margin: 5px 0;
-    font-size: 45px;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    font-size: 1.6rem;
+    line-height: 1.18;
 }
 
+.item-type,
 .description {
-    color: #555;
-    font-size: 35px;
+    margin: 4px 0;
+    font-size: 1.1rem;
+    color: #dcdcdc;
 }
 
 .btnPanier {
     display: flex;
     justify-content: center;
-    width: 450px;
-    height: 70px;
+    margin-top: 12px;
+}
 
-    background-color: rgb(28, 41, 100);
-    font-size: 45px;
+.btnPanierBtn {
+    display: inline-block;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #2b8f2b;
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+
+.btnPanierBtn:hover {
+    background: #64c364;
 }
 
 .btnPanierImg {
@@ -556,6 +572,106 @@ main {
     padding: 20px;
 }
 
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(6, 8, 25, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    backdrop-filter: blur(5px);
+}
+
+.modal-overlay.visible {
+    display: flex;
+}
+
+.modal {
+    width: min(460px, 92vw);
+    background: #0f0f18;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 14px;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.56);
+    padding: 20px;
+    color: #fff;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 0;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    font-size: 22px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.auth-form .form-field {
+    margin-bottom: 12px;
+}
+
+.auth-form label {
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+    color: #ddd;
+}
+
+.auth-form input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.17);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #fff;
+}
+
+.auth-form .form-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
+.btn-primary {
+    background: #2a8f2a;
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.link-button {
+    background: none;
+    border: none;
+    color: #8bb3ff;
+    text-decoration: underline;
+    padding: 0;
+    cursor: pointer;
+}
+
+.toggle-text {
+    margin-top: 14px;
+    font-size: 0.95rem;
+    color: #ccc;
+}
+
+body.blurred {
+    filter: blur(2px);
+    transition: filter 0.2s ease;
+}
 
 .panier-layout {
     display: grid;
