@@ -87,7 +87,6 @@ function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDi
     echo "    <p class=\"description\">Quantité: " . htmlspecialchars($quantityValue, ENT_QUOTES, 'UTF-8') . "</p>\n";
     echo "    <p class=\"prixOr\">" . htmlspecialchars($priceDisplay, ENT_QUOTES, 'UTF-8') . " gold</p>\n";
     echo "    <div class=\"btnPanier\">\n";
-    echo $image;
     echo "      <img src=\"img/addToCart.png\" class=\"btnPanierBtn\" href=\"panier.php?action=add&id=" . intval($id) . "\" alt=\"Ajouter au panier\">\n";
     echo "    </div>\n";
     echo "  </div>\n";
