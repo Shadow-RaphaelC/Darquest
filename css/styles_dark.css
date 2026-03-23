@@ -533,7 +533,11 @@ main {
 
 .btnPanierBtn {
     display: inline-block;
-    width: 100%;
+    align-items: center;
+    justify-content: center;
+    object-fit: contain;
+    width: 400px;
+    height: 50px;
     padding: 12px 14px;
     border-radius: 10px;
     background: #2b8f2b;
