@@ -1,9 +1,5 @@
 /* CSS Par defaut pour le site */
 
-/* div {
-    border: 2px solid red;
-} */
-
 html,
 body {
     margin: 0;
@@ -18,7 +14,6 @@ body {
     background-repeat: no-repeat;
     background-position: center top;
     background-attachment: fixed;
-
     background-color: #151521;
     color: rgb(255, 255, 255);
     padding: 10px 20px;
@@ -30,202 +25,6 @@ main {
 }
 
 /* >-- HEADER --< */
-.headerLogo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: -30px;
-    margin-top: -30px;
-}
-
-.separatorBox {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: nowrap;
-}
-
-.sep {
-    height: 70px;
-}
-
-.headerBox {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    max-width: 1920px;
-    height: auto;
-    margin: 0 auto;
-}
-
-.headerNavButSpecificallyForHomeButton {
-    display: flex;
-    justify-content: left;
-}
-
-.headerNav {
-    display: flex;
-    justify-content: right;
-}
-
-.headerBtn {
-    background-color: transparent;
-    border: 2px solid #fff;
-    color: #fff;
-    padding: 10px 20px;
-    margin: 0 10px;
-    cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.headerBtn:hover {
-    background-color: #fff;
-    color: #151521;
-}
-
-.coins {
-    display: flex;
-    justify-content: center;
-    gap: 2px;
-}
-
-.bronze {
-    color: #cd7f32;
-    background-color: rgba(205, 127, 50, 0.2);
-    border: 2px solid #cd7f32;
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
-}
-
-.silver {
-    color: #c0c0c0;
-    background-color: rgba(192, 192, 192, 0.2);
-    border: 2px solid #c0c0c0;
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
-}
-
-.gold {
-    color: #ffd700;
-    background-color: rgba(255, 215, 0, 0.2);
-    border: 2px solid #ffd700;
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
-}
-
-.headerLogo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: -30px;
-    margin-top: -30px;
-}
-
-.separatorBox {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: nowrap;
-}
-
-.sep {
-    height: 70px;
-}
-
-.headerBox {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    max-width: 1920px;
-    height: auto;
-    margin: 0 auto;
-}
-
-.headerNavButSpecificallyForHomeButton {
-    display: flex;
-    justify-content: left;
-    gap: 6px;
-}
-
-.headerNav {
-    display: flex;
-    justify-content: right;
-}
-
-.headerBtn {
-    background-color: transparent;
-    border: 2px solid #fff;
-    color: #fff;
-    padding: 10px 20px;
-    margin: 0 10px;
-    cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.headerBtn:hover {
-    background-color: #fff;
-    color: #151521;
-}
-
-.coins {
-    display: flex;
-    justify-content: center;
-    gap: 2px;
-}
-
-.bronze {
-    color: #cd7f32;
-    background-color: rgba(205, 127, 50, 0.2);
-    border: 2px solid #cd7f32;
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
-}
-
-.silver {
-    color: #c0c0c0;
-    background-color: rgba(192, 192, 192, 0.2);
-    border: 2px solid #c0c0c0;
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
-}
-
-.gold {
-    color: #ffd700;
-    background-color: rgba(255, 215, 0, 0.2);
-    border: 2px solid #ffd700;
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
-}
-
-.user-profile {
-    display: inline-flex;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 200px 20px 20px 200px;
-    padding: 6px 11px;
-    backdrop-filter: blur(6px);
-    color: #fff;
-    text-decoration: none;
-}
-
-.user-name {
-    margin-right: 8px;
-    font-weight: 500;
-}
-
-.user-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    object-fit: cover;
-}
 
 .headerLogo {
     display: flex;
@@ -235,6 +34,11 @@ main {
     margin-top: 0;
 }
 
+.headerLogo img {
+    max-height: 150px;
+    width: auto;
+}
+
 .separatorBox {
     display: flex;
     align-items: center;
@@ -250,19 +54,30 @@ main {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    align-items: center;
     max-width: 1920px;
     height: auto;
     margin: 0 auto;
+    overflow: visible;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 12px;
 }
 
-.headerNavButSpecificallyForHomeButton { 
+.headerNavButSpecificallyForHomeButton {
     display: flex;
     justify-content: left;
+    align-items: center;
+    gap: 6px;
 }
 
 .headerNav {
     display: flex;
-    justify-content: right;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
 }
 
 .headerActions {
@@ -271,44 +86,16 @@ main {
     gap: 10px;
 }
 
-.auth-btn {
-    background-color: rgba(255, 255, 255, 0.16);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    padding: 8px 16px;
-    border-radius: 10px;
-}
-
-.user-profile {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px 16px 16px 6px;
-    padding: 6px 10px;
-    text-decoration: none;
-    color: #fff;
-}
-
-.user-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.user-name {
-    font-size: 0.9rem;
-}
-
 .headerBtn {
     background-color: transparent;
     border: 2px solid #fff;
     color: #fff;
-    padding: 10px 20px;
-    margin: 0 10px;
+    padding: 8px 14px;
+    margin: 0 6px;
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s;
+    text-decoration: none;
+    display: inline-block;
 }
 
 .headerBtn:hover {
@@ -322,15 +109,13 @@ main {
     pointer-events: none;
 }
 
-/* --------------- */
 .coins {
     display: flex;
     justify-content: center;
     gap: 2px;
-
 }
 
-.bronze {   
+.bronze {
     color: #cd7f32;
     background-color: rgba(205, 127, 50, 0.2);
     border: 2px solid #cd7f32;
@@ -346,7 +131,6 @@ main {
     width: 40px;
     height: 40px;
     line-height: 40px;
-
 }
 
 .gold {
@@ -358,7 +142,45 @@ main {
     line-height: 40px;
 }
 
-/* >-- ACCEUIL --< */
+.user-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px 16px 16px 6px;
+    padding: 6px 10px;
+    text-decoration: none;
+    color: #fff;
+    max-width: 160px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.user-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.auth-btn {
+    background-color: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    padding: 8px 16px;
+    border-radius: 10px;
+}
+
+/* >-- ACCUEIL --< */
 
 .btnBox {
     display: flex;
@@ -369,7 +191,8 @@ main {
 
 .btnMain {
     background-color: rgba(255, 255, 255, 0.50);
-    width: 1420px;
+    width: min(90vw, 1420px);
+    max-width: 100%;
     height: 120px;
     margin: 50px auto 20px auto;
     text-align: center;
@@ -382,23 +205,7 @@ main {
     transition: background-color 0.3s, color 0.3s;
 }
 
-.btnAutre {
-    background-color: rgba(255, 255, 255, 0.50);
-    width: 440px;
-    height: 90px;
-    margin-top: 20px;
-    text-align: center;
-    line-height: 120px;
-    font-size: 24px;
-    font-variant: small-caps;
-    border: 2px solid #fff;
-    color: #fff;
-    text-decoration: none;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.btnEnigma:hover,
-.btnAutre:hover {
+.btnMain:hover {
     background-color: rgba(255, 255, 255, 0.7);
     color: #151521;
 }
@@ -441,24 +248,8 @@ main {
     color: #151521;
 }
 
-
-.headerLogo img {
-    max-height: 150px;
-    width: auto;
-}
-
-.headerNavButSpecificallyForHomeButton {
-    gap: 6px;
-}
-
-.headerBtn {
-    margin: 0 6px;
-    padding: 8px 14px;
-}
-
-/* >-- SHOP --< */
-
 /* >-- ITEM --< */
+
 .itemBox {
     width: 100%;
     max-width: 500px;
@@ -533,17 +324,14 @@ main {
 
 .btnPanierBtn {
     display: inline-block;
-    align-items: center;
-    justify-content: center;
-    object-fit: contain;
-    width: 400px;
-    height: 50px;
+    width: 100%;
     padding: 12px 14px;
     border-radius: 10px;
     background: #2b8f2b;
     color: #ffffff;
     font-weight: 700;
     text-decoration: none;
+    text-align: center;
     transition: background-color 0.2s ease;
 }
 
@@ -554,10 +342,8 @@ main {
 .btnPanierImg {
     width: 70px;
     height: 70px;
-
     object-fit: contain;
 }
-
 
 .item-grid-4 {
     display: grid;
@@ -579,6 +365,8 @@ main {
     gap: 20px;
     padding: 20px;
 }
+
+/* >-- MODAL --< */
 
 .modal-overlay {
     position: fixed;
@@ -607,6 +395,7 @@ main {
     padding: 20px;
     color: #fff;
     position: relative;
+    z-index: 1000;
 }
 
 .modal-close {
@@ -641,6 +430,7 @@ main {
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.07);
     color: #fff;
+    box-sizing: border-box;
 }
 
 .auth-form .form-actions {
@@ -676,10 +466,23 @@ main {
     color: #ccc;
 }
 
-body.blurred {
+.auth-error-banner {
+    background: rgba(200, 50, 50, 0.25);
+    border: 1px solid rgba(220, 80, 80, 0.5);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: #ffaaaa;
+}
+
+/* Blur everything behind the modal except the modal itself */
+body.blurred > *:not(#authModalOverlay) {
     filter: blur(2px);
     transition: filter 0.2s ease;
 }
+
+/* >-- PANIER --< */
 
 .panier-layout {
     display: grid;
@@ -707,20 +510,7 @@ body.blurred {
     margin-top: 0;
 }
 
-.btnPanierBtn {
-    display: inline-block;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid #fff;
-    color: #fff;
-    padding: 8px 14px;
-    text-decoration: none;
-    font-size: 16px;
-    border-radius: 6px;
-}
-
-.btnPanierBtn:hover {
-    background-color: rgba(255, 255, 255, 0.3);
-}
+/* >-- FOOTER --< */
 
 .site-footer {
     position: fixed;
@@ -734,25 +524,18 @@ body.blurred {
     z-index: 1000;
     backdrop-filter: blur(5px);
 }
+
 .site-footer-content {
     max-width: 1200px;
     margin: auto;
 }
+
 .site-footer p {
     margin: 4px 0;
     font-size: 14px;
 }
+
 .site-footer .footer-subtext {
     font-size: 12px;
     opacity: 0.85;
-}
-
-.auth-error-banner {
-    background: rgba(200, 50, 50, 0.25);
-    border: 1px solid rgba(220, 80, 80, 0.5);
-    border-radius: 8px;
-    padding: 8px 12px;
-    margin: 0 0 12px 0;
-    font-size: 0.9rem;
-    color: #ffaaaa;
 }

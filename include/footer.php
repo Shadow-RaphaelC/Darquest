@@ -4,3 +4,4 @@
         <p class="footer-subtext">Goufril, Raphael, Mathis, Vincent</p>
     </div>
 </footer>
+<script src="js/main.js"></script>
