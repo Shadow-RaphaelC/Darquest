@@ -190,7 +190,7 @@ main {
     justify-content: center; 
     padding-left: 100px; 
     padding-right: 100px;
-    gap: 400px;
+    gap: clamp(40px, 2vw, 400px);
 }
 
 .btnMain {
