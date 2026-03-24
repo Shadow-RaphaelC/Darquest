@@ -23,7 +23,7 @@ unset($_SESSION['auth_error'], $_SESSION['auth_mode']);
     </div>
     <div class="separatorBox">
         <img src="img/sep/qq_01_01.png" alt="" class="sep">
-        <?php for ($i = 0; $i < 13; $i++): ?>
+        <?php for ($i = 0; $i < 6; $i++): ?>
             <img src="img/sep/qq_01_02.png" alt="" class="sep">
         <?php endfor; ?>
         <img src="img/sep/qq_01_03.png" alt="" class="sep">

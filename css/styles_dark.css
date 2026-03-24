@@ -44,16 +44,18 @@ main {
     align-items: center;
     justify-content: center;
     flex-wrap: nowrap;
+    overflow: hidden;
 }
 
 .sep {
     height: 70px;
+    width: 300px;
 }
 
 .headerBox {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: right;
     align-items: center;
     max-width: 1920px;
     height: auto;
