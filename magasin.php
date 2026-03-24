@@ -37,7 +37,6 @@ require_once 'BD/bd.php';
                 $image = $p[5] ?? '';
                 $isDisponible = $p[6] ?? true;
 
-                // If quantity looks like price (e.g. 000000...19), prefer actual numeric parse.
                 $quantity = (int)$quantity;
                 $price = (int)$price;
 

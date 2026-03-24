@@ -1,24 +1,23 @@
-// fichier JS initialisation
-// Gestion du modal Connexion / Inscription
+// DarQuest — Modal open/close + sign-in/sign-up toggle
 
 (function () {
-    const openBtn = document.getElementById('openAuthModalBtn');
-    const closeBtn = document.getElementById('closeAuthModalBtn');
-    const overlay = document.getElementById('authModalOverlay');
-    const authTitle = document.getElementById('authModalTitle');
-    const authForm = document.getElementById('authForm');
-    const switchToSignUp = document.getElementById('switchToSignUp');
-    const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+    const overlay      = document.getElementById('authModalOverlay');
+    const openBtn      = document.getElementById('openAuthModalBtn');
+    const closeBtn     = document.getElementById('closeAuthModalBtn');
+    const formSignin   = document.getElementById('formSignin');
+    const formSignup   = document.getElementById('formSignup');
+    const switchBtn    = document.getElementById('switchFormBtn');
+    const modalTitle   = document.getElementById('authModalTitle');
+    const toggleText   = document.getElementById('toggleText');
+    const forgotBtn    = document.getElementById('forgotPasswordBtn');
 
-    if (!overlay || !authForm || !authTitle || !switchToSignUp || !forgotPasswordBtn) {
-        return;
-    }
+    if (!overlay) return;
 
+    // ── Open / Close ──────────────────────────────────────────────────────────
     function openModal() {
         overlay.classList.add('visible');
         overlay.setAttribute('aria-hidden', 'false');
         document.body.classList.add('blurred');
-        setSignIn();
     }
 
     function closeModal() {
@@ -27,110 +26,63 @@
         document.body.classList.remove('blurred');
     }
 
-    function setSignIn() {
-        authTitle.textContent = 'Connexion';
-        authForm.innerHTML = `
-            <div class="form-field">
-                <label for="authUser">Email ou alias</label>
-                <input type="text" id="authUser" name="authUser" required>
-            </div>
-            <div class="form-field">
-                <label for="authPassword">Mot de passe</label>
-                <input type="password" id="authPassword" name="authPassword" required>
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn-primary">Se connecter</button>
-                <button type="button" class="link-button" id="forgotPasswordBtn">Mot de passe oublié ?</button>
-            </div>
-        `;
-        authForm.dataset.mode = 'signin';
-        switchToSignUp.textContent = 'Inscription';
-        document.querySelector('.toggle-text').innerHTML = 'Pas encore de compte ? <button type="button" class="link-button" id="switchToSignUp">Inscription</button>';
+    if (openBtn)  openBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+    // Click outside modal box closes it
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeModal();
+    });
+
+    // Escape key closes it
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && overlay.classList.contains('visible')) closeModal();
+    });
+
+    // ── Switch between sign-in and sign-up ────────────────────────────────────
+    function showSignin() {
+        formSignin.style.display = '';
+        formSignup.style.display = 'none';
+        modalTitle.textContent   = 'Connexion';
+        toggleText.innerHTML     = 'Pas encore de compte ? <button type="button" class="link-button" id="switchFormBtn">Inscription</button>';
         bindSwitch();
-        bindForgot();
     }
 
-    function setSignUp() {
-        authTitle.textContent = 'Inscription';
-        authForm.innerHTML = `
-            <div class="form-field">
-                <label for="signupAlias">Alias</label>
-                <input type="text" id="signupAlias" name="signupAlias" required>
-            </div>
-            <div class="form-field">
-                <label for="signupPrenom">Prénom</label>
-                <input type="text" id="signupPrenom" name="signupPrenom" required>
-            </div>
-            <div class="form-field">
-                <label for="signupNom">Nom</label>
-                <input type="text" id="signupNom" name="signupNom" required>
-            </div>
-            <div class="form-field">
-                <label for="signupEmail">Courriel</label>
-                <input type="email" id="signupEmail" name="signupEmail" required>
-            </div>
-            <div class="form-field">
-                <label for="signupPassword">Mot de passe</label>
-                <input type="password" id="signupPassword" name="signupPassword" required>
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn-primary">S'inscrire</button>
-            </div>
-        `;
-        authForm.dataset.mode = 'signup';
-        switchToSignUp.textContent = 'Connexion';
-        document.querySelector('.toggle-text').innerHTML = 'Déjà un compte ? <button type="button" class="link-button" id="switchToSignUp">Connexion</button>';
+    function showSignup() {
+        formSignin.style.display = 'none';
+        formSignup.style.display = '';
+        modalTitle.textContent   = 'Inscription';
+        toggleText.innerHTML     = 'Deja un compte ? <button type="button" class="link-button" id="switchFormBtn">Connexion</button>';
         bindSwitch();
     }
 
     function bindSwitch() {
-        const btn = document.getElementById('switchToSignUp');
+        const btn = document.getElementById('switchFormBtn');
         if (!btn) return;
         btn.addEventListener('click', function () {
-            if (authForm.dataset.mode === 'signup') {
-                setSignIn();
+            if (formSignup.style.display === 'none') {
+                showSignup();
             } else {
-                setSignUp();
+                showSignin();
             }
         });
     }
 
-    function bindForgot() {
-        const btn = document.getElementById('forgotPasswordBtn');
-        if (!btn) return;
-        btn.addEventListener('click', function () {
-            alert('Fonction de récupération de mot de passe non implémentée actuellement.');
-        });
-    }
-
-    if (openBtn) {
-        openBtn.addEventListener('click', openModal);
-    }
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeModal);
-    }
-
-    overlay.addEventListener('click', function (event) {
-        if (event.target === overlay) {
-            closeModal();
+    if (switchBtn) switchBtn.addEventListener('click', function () {
+        if (formSignup.style.display === 'none') {
+            showSignup();
+        } else {
+            showSignin();
         }
     });
 
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && overlay.classList.contains('visible')) {
-            closeModal();
-        }
+    if (forgotBtn) forgotBtn.addEventListener('click', function () {
+        alert('Recuperation de mot de passe non implementee.');
     });
 
-    authForm.addEventListener('submit', function (event) {
-        event.preventDefault();
-        const mode = authForm.dataset.mode || 'signin';
-        alert(mode === 'signup' ? 'Inscription temporairement désactivée.' : 'Connexion temporairement désactivée.');
+    // ── Auto-open modal if PHP sent back an error ─────────────────────────────
+    if (document.querySelector('.auth-error-banner')) {
+        openModal();
+    }
 
-        // A remplacer par une requête AJAX / envoi réel.
-    });
-
-    setSignIn();
-    bindSwitch();
-    bindForgot();
 })();
