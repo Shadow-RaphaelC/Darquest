@@ -185,8 +185,12 @@ main {
 .btnBox {
     display: flex;
     flex-direction: row;
-    justify-content: center;
     flex-wrap: wrap;
+
+    justify-content: center; 
+    padding-left: 100px; 
+    padding-right: 100px;
+    gap: 400px;
 }
 
 .btnMain {
@@ -212,7 +216,7 @@ main {
 
 .btnEnigma {
     background-color: rgba(255, 255, 255, 0.50);
-    width: min(90vw, 900px);
+    width: min(90vw, 1400px);
     max-width: 100%;
     height: 100px;
     margin: 100px auto 20px auto;
