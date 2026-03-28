@@ -27,8 +27,26 @@ require_once 'BD/bd.php';
         }
         ?>
 
-        <div class="item-grid-4" style="margin-left: 60px;">
-            <?php foreach ($products as $p) :
+        <div class="search-bar">
+            <input type="text" placeholder="find ugly item" class="search-input">
+            <button class="search-button">Search</button>
+        </div>
+
+        <div class="checkboxes">
+            <label><input type="checkbox" name="type" value="Arme"> Arme</label>
+            <label><input type="checkbox" name="type" value="Armure"> Armure</label>
+            <label><input type="checkbox" name="type" value="Items"> Items</label>
+            <label><input type="checkbox" name="type" value="Potions"> Potions</label>
+            <label><input type="checkbox" name="type" value="Sorts"> Sorts</label>
+        </div>
+
+        <div class="radioButtons">
+            <label><input type="radio" name="sort" value="price_asc"> Prix croissant</label>
+            <label><input type="radio" name="sort" value="price_desc"> Prix décroissant</label>
+        </div>
+
+        <div class="item-grid-4" style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px;">
+            <?php foreach ($products as $p):
                 $id = $p[0] ?? null;
                 $nom = $p[1] ?? '';
                 $quantity = $p[2] ?? 0;
@@ -37,8 +55,8 @@ require_once 'BD/bd.php';
                 $image = $p[5] ?? '';
                 $isDisponible = $p[6] ?? true;
 
-                $quantity = (int)$quantity;
-                $price = (int)$price;
+                $quantity = (int) $quantity;
+                $price = (int) $price;
 
                 render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDisponible);
             endforeach;
