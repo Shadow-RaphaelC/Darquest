@@ -620,3 +620,12 @@ body.blurred > *:not(#authModalOverlay) {
   font-size: 18px;
   cursor: pointer;
 }
+
+/* MAGASIN */
+.checkboxes {
+    margin-top: 10px;
+}
+
+.radioButtons {
+    margin-top: 5px;
+}
