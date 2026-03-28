@@ -44,16 +44,18 @@ main {
     align-items: center;
     justify-content: center;
     flex-wrap: nowrap;
+    overflow: hidden;
 }
 
 .sep {
     height: 70px;
+    width: 300px;
 }
 
 .headerBox {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: right;
     align-items: center;
     max-width: 1920px;
     height: auto;
@@ -185,8 +187,12 @@ main {
 .btnBox {
     display: flex;
     flex-direction: row;
-    justify-content: center;
     flex-wrap: wrap;
+
+    justify-content: center; 
+    padding-left: 100px; 
+    padding-right: 100px;
+    gap: clamp(40px, 2vw, 400px);
 }
 
 .btnMain {
@@ -212,7 +218,7 @@ main {
 
 .btnEnigma {
     background-color: rgba(255, 255, 255, 0.50);
-    width: min(90vw, 900px);
+    width: min(90vw, 1400px);
     max-width: 100%;
     height: 100px;
     margin: 100px auto 20px auto;
@@ -335,14 +341,20 @@ main {
     transition: background-color 0.2s ease;
 }
 
-.btnPanierBtn:hover {
-    background: #64c364;
-}
-
 .btnPanierImg {
-    width: 70px;
+    background: #87d687;
+    width: 90vw;
+    max-width: 400px;
+
+    border-radius: 10px;
     height: 70px;
     object-fit: contain;
+}
+
+.btnPanierBtn,
+.btnPanierImg:hover {
+    background: #adf3ad;
+    transition: 0.3s ease-out;
 }
 
 .item-grid-4 {

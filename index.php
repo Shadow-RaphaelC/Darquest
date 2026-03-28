@@ -1,5 +1,4 @@
 <?php
-require_once 'include/session.php';
 require_once 'BD/bd.php';
 ?>
 
@@ -17,14 +16,14 @@ require_once 'BD/bd.php';
     <?php require 'include/header.php'; ?>
     <main>
         <div class="btnBox">
-            <a class="btnMain" href="magasin.php">Magasin</a>
+            <a class="btnEnigma" href="magasin.php">Magasin</a>
         </div>
         <div class="btnBox">
-            <a class="btnMain" href="enigma.php">Enigma</a>
+            <a class="btnEnigma" href="enigma.php">Enigma</a>
         </div>
-        <div style="justify-content: space-evenly; padding-left: 100px; padding-right: 100px;" class="btnBox">
+        <div class="btnBox">
             <?php
-                $locked = (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) ? ' headerBtn locked' : '';
+            $locked = (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) ? ' headerBtn locked' : '';
             ?>
             <a class="btnAutre<?php echo $locked; ?>" href="panier.php">Panier</a>
             <a class="btnAutre<?php echo $locked; ?>" href="inventaire.php">Inventaire</a>

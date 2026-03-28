@@ -25,7 +25,7 @@
         <p class="prixOr">67 gold</p>
         <div class="btnPanier">
             <a href="panier.php?action=add&id=67">
-                <img src="img/addToCart.png" class="btnPanierBtn" alt="Ajouter au panier">
+                <img class="btnPanierImg" src="img/addToCart.png" alt="Ajouter au panier">
             </a>
         </div>
     </div>
