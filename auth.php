@@ -36,10 +36,13 @@ try {
     $stmt = $pdo->prepare(
         'SELECT idJoueur, alias, motDePasse, estAdmin
          FROM Joueurs
-         WHERE alias = :identifiant OR courriel = :identifiant
+         WHERE alias = :identifiant1 OR courriel = :identifiant2
          LIMIT 1'
     );
-    $stmt->execute([':identifiant' => $identifier]);
+    $stmt->execute([
+        ':identifiant1' => $identifier,
+        ':identifiant2' => $identifier,
+    ]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
