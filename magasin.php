@@ -27,7 +27,7 @@ require_once 'BD/bd.php';
         }
         ?>
 
-        <div class="item-grid-4">
+        <div class="item-grid-4" style="margin-left: 60px;">
             <?php foreach ($products as $p) :
                 $id = $p[0] ?? null;
                 $nom = $p[1] ?? '';
