@@ -43,7 +43,8 @@ function AfficherItems(): array
 
         $rows = $stmt->fetchAll(PDO::FETCH_NUM);
 
-        while ($stmt->nextRowset()){ }
+        while ($stmt->nextRowset()) {
+        }
 
         return $rows;
     } catch (PDOException $e) {
@@ -52,13 +53,14 @@ function AfficherItems(): array
     }
 }
 
-function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDisponible) {
+function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDisponible)
+{
     $isDisponibleNormalized = filter_var($isDisponible, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
     if ($isDisponibleNormalized === false) {
         return;
     }
 
-    $typeItemCode = strtoupper(trim((string)$typeItem));
+    $typeItemCode = strtoupper(trim((string) $typeItem));
     if ($typeItemCode === 'A' || $typeItemCode === 'ARME') {
         $typeLabel = 'Arme';
     } elseif ($typeItemCode === 'R' || $typeItemCode === 'ARMURE') {
@@ -73,8 +75,8 @@ function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDi
         $typeLabel = 'Autre';
     }
 
-    $quantityValue = (int)$quantity;
-    $priceValue = (int)$price;
+    $quantityValue = (int) $quantity;
+    $priceValue = (int) $price;
     $priceDisplay = number_format($priceValue, 0, '', '');
 
     echo "<div class=\"itemBox\">\n";
@@ -87,9 +89,13 @@ function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDi
     echo "    <p class=\"description\">Quantité: " . htmlspecialchars($quantityValue, ENT_QUOTES, 'UTF-8') . "</p>\n";
     echo "    <p class=\"prixOr\">" . htmlspecialchars($priceDisplay, ENT_QUOTES, 'UTF-8') . " gold</p>\n";
     echo "    <div class=\"btnPanier\">\n";
-    echo "      <a href=\"panier.php?action=add&id=" . intval($id) . "\">\n";
-    echo "        <img src=\"img/addToCart.png\" class=\"btnPanierImg\" alt=\"Ajouter au panier\">\n";
-    echo "      </a>\n";
+    echo "      <form method=\"GET\" action=\"panier.php\" target=\"panier-frame\">\n";
+    echo "        <input type=\"hidden\" name=\"action\" value=\"add\">\n";
+    echo "        <input type=\"hidden\" name=\"id\" value=\"" . intval($id) . "\">\n";
+    echo "        <button type=\"submit\" class=\"btnPanierImg-btn\">\n";
+    echo "          <img src=\"img/addToCart.png\" class=\"btnPanierImg\" alt=\"Ajouter au panier\">\n";
+    echo "        </button>\n";
+    echo "      </form>\n";
     echo "    </div>\n";
     echo "  </div>\n";
     echo "</div>\n";
@@ -98,18 +104,20 @@ function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDi
 // -------------------------
 // Ajouter au Panier
 // -------------------------
-function AjouterPanier(int $idJoueur, int $idItem, int $quantite): array
+function AjouterPanier(string $alias, int $idItem, int $quantite): array
 {
     $pdo = get_pdo();
-    if ($pdo === false) return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    if ($pdo === false)
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
     try {
-        $stmt = $pdo->prepare('CALL AjouterPanier(:idJoueur, :idItem, :quantite)');
+        $stmt = $pdo->prepare('CALL AjouterPanier(:alias, :idItem, :quantite)');
         $stmt->execute([
-            ':idJoueur'  => $idJoueur,
-            ':idItem'    => $idItem,
-            ':quantite'  => $quantite,
+            ':alias' => $alias,
+            ':idItem' => $idItem,
+            ':quantite' => $quantite,
         ]);
-        while ($stmt->nextRowset()) {}
+        while ($stmt->nextRowset()) {
+        }
         return ['success' => true];
     } catch (PDOException $e) {
         error_log('AjouterPanier error: ' . $e->getMessage());
@@ -126,10 +134,11 @@ function AjouterPanier(int $idJoueur, int $idItem, int $quantite): array
 function AfficherPanier(int $idJoueur): array
 {
     $pdo = get_pdo();
-    if ($pdo === false) return [];
+    if ($pdo === false)
+        return [];
     try {
         $stmt = $pdo->prepare(
-            'SELECT p.idPanier, p.idItem, p.quantitePanier, i.nomItem, i.prix, i.image
+            'SELECT p.idItem, p.quantitePanier, i.nom, i.prix, i.image
              FROM Panier p
              JOIN Items i ON i.idItem = p.idItem
              WHERE p.idJoueur = :idJoueur'
@@ -145,15 +154,16 @@ function AfficherPanier(int $idJoueur): array
 // -------------------------
 // Retirer du Panier
 // -------------------------
-function RetirerPanier(int $idPanier, int $idJoueur): bool
+function RetirerPanier(int $idItem, int $idJoueur): bool
 {
     $pdo = get_pdo();
-    if ($pdo === false) return false;
+    if ($pdo === false)
+        return false;
     try {
         $stmt = $pdo->prepare(
-            'DELETE FROM Panier WHERE idPanier = :idPanier AND idJoueur = :idJoueur'
+            'DELETE FROM Panier WHERE idItem = :idItem AND idJoueur = :idJoueur'
         );
-        $stmt->execute([':idPanier' => $idPanier, ':idJoueur' => $idJoueur]);
+        $stmt->execute([':idItem' => $idItem, ':idJoueur' => $idJoueur]);
         return true;
     } catch (PDOException $e) {
         error_log('RetirerPanier error: ' . $e->getMessage());
@@ -164,23 +174,45 @@ function RetirerPanier(int $idPanier, int $idJoueur): bool
 // -------------------------
 // Modifier Quantité Panier
 // -------------------------
-function ModifierQuantitePanier(int $idPanier, int $idJoueur, int $nouvelleQte): bool
+function ModifierQuantitePanier(int $idItem, int $idJoueur, int $nouvelleQte): bool
 {
     $pdo = get_pdo();
-    if ($pdo === false) return false;
+    if ($pdo === false)
+        return false;
     try {
         $stmt = $pdo->prepare(
             'UPDATE Panier SET quantitePanier = :qte
-             WHERE idPanier = :idPanier AND idJoueur = :idJoueur'
+             WHERE idItem = :idItem AND idJoueur = :idJoueur'
         );
         $stmt->execute([
-            ':qte'      => $nouvelleQte,
-            ':idPanier' => $idPanier,
+            ':qte' => $nouvelleQte,
+            ':idItem' => $idItem,
             ':idJoueur' => $idJoueur,
         ]);
         return true;
     } catch (PDOException $e) {
         error_log('ModifierQuantitePanier error: ' . $e->getMessage());
         return false;
+    }
+}
+
+// -------------------------
+// Fetch player coins
+// -------------------------
+function GetJoueurCoins(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['gold' => 0, 'argent' => 0, 'bronze' => 0];
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT gold, argent, bronze FROM Joueurs WHERE idJoueur = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+        return $row ?: ['gold' => 0, 'argent' => 0, 'bronze' => 0];
+    } catch (PDOException $e) {
+        error_log('GetJoueurCoins error: ' . $e->getMessage());
+        return ['gold' => 0, 'argent' => 0, 'bronze' => 0];
     }
 }

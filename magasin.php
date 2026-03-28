@@ -64,6 +64,7 @@ require_once 'BD/bd.php';
         </div>
     </main>
     <?php require 'include/footer.php'; ?>
+    <iframe name="panier-frame" style="display:none;"></iframe>
 </body>
 
 </html>

@@ -66,6 +66,12 @@ if (!$user || !password_verify($password, $user['motDePasse'])) {
     $_SESSION['username']  = $user['alias'];
     $_SESSION['is_admin']  = (bool)$user['estAdmin'];
 
+    // Load coins into session
+    $coins = GetJoueurCoins((int)$_SESSION['user_id']);
+    $_SESSION['gold']   = $coins['gold'];
+    $_SESSION['argent'] = $coins['argent'];
+    $_SESSION['bronze'] = $coins['bronze'];
+
     header('Location: index.php');
     exit;
 }
@@ -148,6 +154,12 @@ if ($mode === 'signup') {
     $_SESSION['logged_in'] = true;
     $_SESSION['username']  = $alias;
     $_SESSION['is_admin']  = false;
+    
+    // Load coins into session
+    $coins = GetJoueurCoins((int)$_SESSION['user_id']);
+    $_SESSION['gold']   = $coins['gold'];
+    $_SESSION['argent'] = $coins['argent'];
+    $_SESSION['bronze'] = $coins['bronze'];
 
     if (!empty($newUser['idJoueur'])) {
         $_SESSION['user_id'] = $newUser['idJoueur'];
