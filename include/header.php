@@ -25,9 +25,9 @@ unset($_SESSION['auth_error'], $_SESSION['auth_mode']);
     <div class="headerBox">
         <nav class="headerNav">
             <div class="coins">
-                <span class="bronze">0</span>
-                <span class="silver">0</span>
                 <span class="gold">0</span>
+                <span class="silver">0</span>
+                <span class="bronze">0</span>
             </div>
 
             <?php if (!$loggedIn): ?>
