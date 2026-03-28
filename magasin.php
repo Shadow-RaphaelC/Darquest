@@ -37,13 +37,14 @@ require_once 'BD/bd.php';
             <label><input type="checkbox" name="type" value="Armure"> Armure</label>
             <label><input type="checkbox" name="type" value="Items"> Items</label>
             <label><input type="checkbox" name="type" value="Potions"> Potions</label>
+            <label><input type="checkbox" name="type" value="Sorts"> Sorts</label>
         </div>
 
         <div class="radioButtons">
             <label><input type="radio" name="sort" value="price_asc"> Prix croissant</label>
             <label><input type="radio" name="sort" value="price_desc"> Prix décroissant</label>
         </div>
-        
+
         <div class="item-grid-4" style="margin-left: 60px;">
             <?php foreach ($products as $p):
                 $id = $p[0] ?? null;
