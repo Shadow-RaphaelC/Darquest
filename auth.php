@@ -33,12 +33,12 @@ if ($mode === 'signin') {
     }
 
     try {
-        // The SP finds the row by alias or courriel and returns it
-        $stmt = $pdo->prepare('CALL ConnexionDeJoueur(:identifiant)');
-        $stmt->execute([':identifiant' => $identifier]);
+
+        $stmt = $pdo->prepare('CALL ConnexionDeJoueur(:identifiant, :motDePasse)');
+        $stmt->execute([':identifiant' => $identifier, ':motDePasse' => $password]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Consume any extra result sets so PDO doesn't complain on next query
+
         while ($stmt->nextRowset()) {}
 
     } catch (PDOException $e) {
