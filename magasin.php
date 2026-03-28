@@ -45,7 +45,7 @@ require_once 'BD/bd.php';
             <label><input type="radio" name="sort" value="price_desc"> Prix décroissant</label>
         </div>
 
-        <div class="item-grid-4" style="margin-left: 60px;">
+        <div class="item-grid-4" style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px;">
             <?php foreach ($products as $p):
                 $id = $p[0] ?? null;
                 $nom = $p[1] ?? '';
