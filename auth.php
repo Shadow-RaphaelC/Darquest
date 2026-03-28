@@ -32,32 +32,32 @@ if ($mode === 'signin') {
         exit;
     }
 
-    try {
+try {
+    $stmt = $pdo->prepare(
+        'SELECT idJoueur, alias, motDePasse, estAdmin
+         FROM Joueurs
+         WHERE alias = :identifiant OR courriel = :identifiant
+         LIMIT 1'
+    );
+    $stmt->execute([':identifiant' => $identifier]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $stmt = $pdo->prepare('CALL ConnexionDeJoueur(:identifiant, :motDePasse)');
-        $stmt->execute([':identifiant' => $identifier, ':motDePasse' => $password]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log('ConnexionDeJoueur error: ' . $e->getMessage());
+    $_SESSION['auth_error'] = 'Erreur lors de la connexion.';
+    $_SESSION['auth_mode']  = 'signin';
+    header('Location: index.php');
+    exit;
+}
 
-
-        while ($stmt->nextRowset()) {}
-
-    } catch (PDOException $e) {
-        error_log('ConnexionDeJoueur error: ' . $e->getMessage());
-        $_SESSION['auth_error'] = 'Erreur lors de la connexion.';
-        $_SESSION['auth_mode']  = 'signin';
-        header('Location: index.php');
-        exit;
-    }
-
-    // No user found OR password doesn't match — same generic message for security
-    if (!$user || !password_verify($password, $user['motDePasse'])) {
+if (!$user || !password_verify($password, $user['motDePasse'])) {
         $_SESSION['auth_error'] = 'Identifiant ou mot de passe incorrect.';
         $_SESSION['auth_mode']  = 'signin';
         header('Location: index.php');
         exit;
     }
 
-    session_regenerate_id(true);
+    session_regenerate_id(false);
     $_SESSION['logged_in'] = true;
     $_SESSION['user_id']   = $user['idJoueur'];
     $_SESSION['username']  = $user['alias'];
@@ -141,7 +141,7 @@ if ($mode === 'signup') {
     }
 
     // ── Log the new user in immediately ──────────────────────────────────────
-    session_regenerate_id(true);
+    session_regenerate_id(false);
     $_SESSION['logged_in'] = true;
     $_SESSION['username']  = $alias;
     $_SESSION['is_admin']  = false;

@@ -1,16 +1,10 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    if (!headers_sent()) {
-        session_start();
-    }
-}
-
 $currentPage = basename($_SERVER['SCRIPT_NAME']);
 $loggedIn    = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
 $userName    = $loggedIn ? ($_SESSION['username'] ?? 'Joueur') : 'Invité';
 $isAdmin     = $loggedIn && !empty($_SESSION['is_admin']);
 
-// Pull error/mode from session (flash — shown once then cleared)
+// Pull error/mode from session
 $authError = $_SESSION['auth_error'] ?? '';
 $authMode  = $_SESSION['auth_mode']  ?? 'signin';
 unset($_SESSION['auth_error'], $_SESSION['auth_mode']);
