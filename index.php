@@ -19,7 +19,7 @@ require_once 'BD/bd.php';
         <div class="btnBox">
             <a class="btnEnigma" href="magasin.php">Magasin</a>
         </div>
-        <div class="btnBox">
+        <div class="btnBox" style="margin-top: -80px;">
             <a class="btnEnigma" href="enigma.php">Enigma</a>
         </div>
         <div class="btnBox">
