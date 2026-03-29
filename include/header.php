@@ -93,3 +93,68 @@ if ($currentPage === 'panier.php') {
         </nav>
     </div>
 </header>
+<?php if (!$loggedIn): ?>
+<div id="authModalOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal">
+        <button id="closeAuthModalBtn" class="modal-close" type="button">&times;</button>
+        <h2 id="authModalTitle">Connexion</h2>
+
+        <?php if ($authError !== ''): ?>
+            <div class="auth-error-banner"><?= htmlspecialchars($authError, ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+
+        <!-- Sign-in form -->
+        <form id="formSignin" class="auth-form" action="auth.php" method="POST" style="<?= $authMode === 'signup' ? 'display:none;' : '' ?>">
+            <input type="hidden" name="mode" value="signin">
+            <div class="form-field">
+                <label>Alias ou courriel</label>
+                <input type="text" name="authUser" required>
+            </div>
+            <div class="form-field">
+                <label>Mot de passe</label>
+                <input type="password" name="authPassword" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Se connecter</button>
+                <button type="button" id="forgotPasswordBtn" class="link-button">Mot de passe oublié ?</button>
+            </div>
+        </form>
+
+        <!-- Sign-up form -->
+        <form id="formSignup" class="auth-form" action="auth.php" method="POST" style="<?= $authMode === 'signup' ? '' : 'display:none;' ?>">
+            <input type="hidden" name="mode" value="signup">
+            <div class="form-field">
+                <label>Alias</label>
+                <input type="text" name="signupAlias" required>
+            </div>
+            <div class="form-field">
+                <label>Prénom</label>
+                <input type="text" name="signupPrenom" required>
+            </div>
+            <div class="form-field">
+                <label>Nom</label>
+                <input type="text" name="signupNom" required>
+            </div>
+            <div class="form-field">
+                <label>Courriel</label>
+                <input type="email" name="signupEmail" required>
+            </div>
+            <div class="form-field">
+                <label>Mot de passe</label>
+                <input type="password" name="signupPassword" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Créer un compte</button>
+            </div>
+        </form>
+
+        <p id="toggleText" class="toggle-text">
+            <?php if ($authMode === 'signup'): ?>
+                Déjà un compte ? <button type="button" class="link-button" id="switchFormBtn">Connexion</button>
+            <?php else: ?>
+                Pas encore de compte ? <button type="button" class="link-button" id="switchFormBtn">Inscription</button>
+            <?php endif; ?>
+        </p>
+    </div>
+</div>
+<?php endif; ?>
