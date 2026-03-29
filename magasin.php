@@ -2,9 +2,8 @@
 require_once 'include/session.php';
 require_once 'BD/bd.php';
 ?>
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 
 <head>
     <meta charset="UTF-8">
@@ -19,52 +18,141 @@ require_once 'BD/bd.php';
         <h1>Magasin</h1>
         <p>Bienvenue dans le magasin.</p>
 
-        <?php
-        $products = AfficherItems();
-
-        if (!is_array($products)) {
-            $products = [];
-        }
-        ?>
-
-        <div class="search-bar">
-            <input type="text" placeholder="find ugly item" class="search-input">
-            <button class="search-button">Search</button>
+        <div class="shop-filters">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Rechercher un item" class="search-input">
+                <button class="search-button" onclick="applyFilters()">Search</button>
+            </div>
+            <div class="checkboxes">
+                <label class="filter-checkbox"><input type="checkbox" name="type" value="Arme"
+                        onchange="applyFilters()"> Arme</label>
+                <label class="filter-checkbox"><input type="checkbox" name="type" value="Armure"
+                        onchange="applyFilters()"> Armure</label>
+                <label class="filter-checkbox"><input type="checkbox" name="type" value="Potion"
+                        onchange="applyFilters()"> Potions</label>
+                <label class="filter-checkbox"><input type="checkbox" name="type" value="Sort"
+                        onchange="applyFilters()"> Sorts</label>
+            </div>
+            <div class="radioButtons">
+                <label class="filter-radio"><input type="radio" name="sort" value="price_asc" onchange="applyFilters()">
+                    Prix croissant
+                </label>
+                <label class="filter-radio"><input type="radio" name="sort" value="price_desc"
+                        onchange="applyFilters()"> Prix décroissant
+                </label>
+            </div>
         </div>
 
-        <div class="checkboxes">
-            <label><input type="checkbox" name="type" value="Arme"> Arme</label>
-            <label><input type="checkbox" name="type" value="Armure"> Armure</label>
-            <label><input type="checkbox" name="type" value="Items"> Items</label>
-            <label><input type="checkbox" name="type" value="Potions"> Potions</label>
-            <label><input type="checkbox" name="type" value="Sorts"> Sorts</label>
-        </div>
+        <div class="item-grid-4" id="itemGrid">
+            <?php
+            $products = AfficherItems();
+            if (!is_array($products))
+                $products = [];
 
-        <div class="radioButtons">
-            <label><input type="radio" name="sort" value="price_asc"> Prix croissant</label>
-            <label><input type="radio" name="sort" value="price_desc"> Prix décroissant</label>
-        </div>
-
-        <div class="item-grid-4" style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px;">
-            <?php foreach ($products as $p):
+            foreach ($products as $p):
                 $id = $p[0] ?? null;
                 $nom = $p[1] ?? '';
-                $quantity = $p[2] ?? 0;
+                $quantity = (int) ($p[2] ?? 0);
                 $typeItem = $p[3] ?? '';
-                $price = $p[4] ?? 0;
+                $price = (int) ($p[4] ?? 0);
                 $image = $p[5] ?? '';
                 $isDisponible = $p[6] ?? true;
 
-                $quantity = (int) $quantity;
-                $price = (int) $price;
+                if (filter_var($isDisponible) === false)
+                    continue;
 
-                render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDisponible);
-            endforeach;
-            ?>
+                $typeCode = strtoupper(trim((string) $typeItem));
+                if ($typeCode === 'A' || $typeCode === 'ARME')
+                    $typeLabel = 'Arme';
+                else if ($typeCode === 'R' || $typeCode === 'ARMURE')
+                    $typeLabel = 'Armure';
+                else if ($typeCode === 'P' || $typeCode === 'POTION')
+                    $typeLabel = 'Potion';
+                else if ($typeCode === 'S' || $typeCode === 'SORT')
+                    $typeLabel = 'Sort';
+                else if ($typeCode !== '')
+                    $typeLabel = ucfirst(strtolower($typeCode));
+                else
+                    $typeLabel = 'Autre';
+                ?>
+                <div class="itemBox" data-type="<?= htmlspecialchars($typeLabel) ?>" data-price="<?= $price ?>"
+                    data-name="<?= htmlspecialchars(strtolower($nom)) ?>">
+                    <div class="item-img-wrapper">
+                        <img class="item-img" src="<?= htmlspecialchars($image) ?>" alt="<?= htmlspecialchars($nom) ?>">
+                    </div>
+                    <div class="item-info">
+                        <h3 class="titre"><?= htmlspecialchars($nom) ?></h3>
+                        <p class="item-type">Type : <?= htmlspecialchars($typeLabel) ?></p>
+                        <p class="description">Quantité : <?= $quantity ?></p>
+                        <p class="prixOr"><?= number_format($price, 0, '', '') ?> gold</p>
+                        <div class="btnPanier">
+                            <form method="GET" action="panier.php" target="panier-frame">
+                                <input type="hidden" name="action" value="add">
+                                <input type="hidden" name="id" value="<?= intval($id) ?>">
+                                <button type="submit" class="btnPanierImg-btn" onclick="cartFeedback(this)">
+                                    <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
+
+        <p id="noResults" style="display:none; opacity:0.5; margin-top:2rem;">Aucun objet trouvé.</p>
     </main>
+
     <?php require 'include/footer.php'; ?>
     <iframe name="panier-frame" style="display:none;"></iframe>
+
+    <script>
+        // ---- CART FEEDBACK ----
+        function cartFeedback(btn) {
+            btn.disabled = true;
+            btn.querySelector('.btnPanierImg').style.display = 'none';
+
+            const msg = document.createElement('span');
+            msg.textContent = 'Ajouté !';
+            msg.className = 'cart-feedback-msg';
+            btn.appendChild(msg);
+
+            setTimeout(() => {
+                btn.querySelector('.btnPanierImg').style.display = '';
+                msg.remove();
+                btn.disabled = false;
+            }, 1500);
+        }
+
+        // ---- FILTERS & SORTING ----
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const checkedTypes = [...document.querySelectorAll('input[name="type"]:checked')].map(cb => cb.value);
+            const sortValue = document.querySelector('input[name="sort"]:checked')?.value ?? null;
+
+            const grid = document.getElementById('itemGrid');
+            let cards = [...grid.querySelectorAll('.itemBox')];
+
+            cards.forEach(card => {
+                const matchesSearch = !query || card.dataset.name.includes(query);
+                const matchesType = checkedTypes.length === 0 || checkedTypes.includes(card.dataset.type);
+                card.style.display = (matchesSearch && matchesType) ? '' : 'none';
+            });
+
+            if (sortValue) {
+                cards
+                    .filter(c => c.style.display !== 'none')
+                    .sort((a, b) => sortValue === 'price_asc'
+                        ? a.dataset.price - b.dataset.price
+                        : b.dataset.price - a.dataset.price)
+                    .forEach(card => grid.appendChild(card));
+            }
+
+            document.getElementById('noResults').style.display =
+                cards.some(c => c.style.display !== 'none') ? 'none' : 'block';
+        }
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+    </script>
 </body>
 
 </html>
