@@ -41,9 +41,10 @@ require_once 'BD/bd.php';
                         onchange="applyFilters()"> Prix décroissant
                 </label>
             </div>
+
         </div>
 
-        <div class="item-grid-4" id="itemGrid">
+        <div class="item-grid-4" id="itemGrid" style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between;" >
             <?php
             $products = AfficherItems();
             if (!is_array($products))
