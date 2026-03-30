@@ -10,13 +10,23 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
         $idItem = (int) $_GET['id'];
         $quantite = max(1, (int) ($_GET['qte'] ?? 1));
         $alias = $_SESSION['username'];
+        
+        $itemType = GetItemType($idItem);
+        $typeCode = strtoupper(trim((string) ($itemType['typeItem'] ?? '')));
+        
+        if ($typeCode === 'S' || $typeCode === 'SORT') {
+            $mageStatus = GetMageStatus($userId);
+            if ((int)$mageStatus['estMage'] !== 1) {
+                $_SESSION['panier_error'] = 'Vous devez être un Mage pour acheter des sorts.';
+                header('Location: panier.php');
+                exit;
+            }
+        }
+        
         $result = AjouterPanier($alias, $idItem, $quantite);
-        die(json_encode([
-            'alias' => $alias,
-            'idItem' => $idItem,
-            'quantite' => $quantite,
-            'result' => $result,
-        ]));
+        $_SESSION['panier_error'] = isset($result['message']) ? $result['message'] : '';
+        header('Location: panier.php');
+        exit;
     }
 
     if ($action === 'remove' && isset($_GET['idItem'])) {

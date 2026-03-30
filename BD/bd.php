@@ -266,3 +266,45 @@ function AfficherInventaire(int $idJoueur): array
         return [];
     }
 }
+
+// -------------------------
+// Get Item Type by ID
+// -------------------------
+function GetItemType(int $idItem): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['typeItem' => ''];
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT typeItem FROM Items WHERE idItem = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $idItem]);
+        $row = $stmt->fetch();
+        return $row ?: ['typeItem' => ''];
+    } catch (PDOException $e) {
+        error_log('GetItemType error: ' . $e->getMessage());
+        return ['typeItem' => ''];
+    }
+}
+
+// -------------------------
+// Fetch Mage Status
+// -------------------------
+function GetMageStatus(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['isMage' => false];
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT estMage FROM Joueurs WHERE idJoueur = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+        return $row ?: ['estMage' => 0];
+    } catch (PDOException $e) {
+        error_log('GetMageStatus error: ' . $e->getMessage());
+        return ['estMage' => 0];
+    }
+}

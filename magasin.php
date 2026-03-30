@@ -80,6 +80,14 @@ require_once 'BD/bd.php';
                     $typeLabel = ucfirst(strtolower($typeCode));
                 else
                     $typeLabel = 'Autre';
+                
+                $isLogged = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
+                $isMage = false;
+                if ($isLogged && isset($_SESSION['user_id']) && $typeCode === 'S') {
+                    $mageStatus = GetMageStatus((int)$_SESSION['user_id']);
+                    $isMage = (int)$mageStatus['estMage'] === 1;
+                }
+                $isSpell = ($typeCode === 'S' || $typeCode === 'SORT');
                 ?>
                 <div class="itemBox" data-type="<?= htmlspecialchars($typeLabel) ?>" data-price="<?= $price ?>"
                     data-name="<?= htmlspecialchars(strtolower($nom)) ?>" data-order="<?= htmlspecialchars($p[0] ?? '') ?>">
@@ -100,13 +108,21 @@ require_once 'BD/bd.php';
                         <p class="prixOr"><?= number_format($price, 0, '', '') ?> gold</p>
                         <div class="btnPanier">
                             <?php if ($quantity > 0): ?>
-                                <form method="GET" action="panier.php" target="panier-frame">
-                                    <input type="hidden" name="action" value="add">
-                                    <input type="hidden" name="id" value="<?= intval($id) ?>">
-                                    <button type="submit" class="btnPanierImg-btn">
-                                        <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
-                                    </button>
-                                </form>
+                                <?php if ($isSpell && (!$isLogged || !$isMage)): ?>
+                                    <?php if (!$isLogged): ?>
+                                        <span class="btnPanierImg--disabled">Connectez-vous</span>
+                                    <?php else: ?>
+                                        <span class="btnPanierImg--disabled">Vous n'etes pas Mage</span>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <form method="GET" action="panier.php" target="panier-frame">
+                                        <input type="hidden" name="action" value="add">
+                                        <input type="hidden" name="id" value="<?= intval($id) ?>">
+                                        <button type="submit" class="btnPanierImg-btn">
+                                            <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <span class="btnPanierImg--disabled">Rupture de stock</span>
                             <?php endif; ?>
@@ -140,9 +156,23 @@ require_once 'BD/bd.php';
     </div>
 
     <script>
+        // ---- USER STATE ----
+        const isLoggedIn = <?= isset($_SESSION['logged_in']) && $_SESSION['logged_in'] ? 'true' : 'false' ?>;
+        const userId = <?= isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : '0' ?>;
+        let userIsMage = false;
+        
+        <?php
+        if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] && isset($_SESSION['user_id'])) {
+            $mageStatus = GetMageStatus((int)$_SESSION['user_id']);
+            echo 'userIsMage = ' . ((int)$mageStatus['estMage'] === 1 ? 'true' : 'false') . ';';
+        }
+        ?>
+
         // ---- CART FEEDBACK HELPER ----
         function attachCartFeedback(form) {
             form.addEventListener('submit', function (e) {
+                if (!isLoggedIn) return;
+                
                 const btn = this.querySelector('.btnPanierImg-btn');
                 const img = this.querySelector('.btnPanierImg');
 
@@ -235,16 +265,39 @@ require_once 'BD/bd.php';
 
             const btnDiv = document.getElementById('modalBtn');
             if (qte > 0) {
-                btnDiv.innerHTML = `
-            <form method="GET" action="panier.php" target="panier-frame">
-                <input type="hidden" name="action" value="add">
-                <input type="hidden" name="id" value="${id}">
-                <button type="submit" class="btnPanierImg-btn">
-                    <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
-                </button>
-            </form>`;
-                const newForm = btnDiv.querySelector('form');
-                attachCartFeedback(newForm);
+                if (type === 'Sort') {
+                    if (!isLoggedIn) {
+                        btnDiv.innerHTML = `<span class="btnPanierImg--disabled">Connectez-vous pour acheter</span>`;
+                    } else if (!userIsMage) {
+                        btnDiv.innerHTML = `<span class="btnPanierImg--disabled">Seuls les Mages peuvent acheter des sorts</span>`;
+                    } else {
+                        btnDiv.innerHTML = `
+                    <form method="GET" action="panier.php" target="panier-frame">
+                        <input type="hidden" name="action" value="add">
+                        <input type="hidden" name="id" value="${id}">
+                        <button type="submit" class="btnPanierImg-btn">
+                            <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
+                        </button>
+                    </form>`;
+                        const newForm = btnDiv.querySelector('form');
+                        attachCartFeedback(newForm);
+                    }
+                } else {
+                    if (!isLoggedIn) {
+                        btnDiv.innerHTML = `<span class="btnPanierImg--disabled">Connectez-vous pour acheter</span>`;
+                    } else {
+                        btnDiv.innerHTML = `
+                    <form method="GET" action="panier.php" target="panier-frame">
+                        <input type="hidden" name="action" value="add">
+                        <input type="hidden" name="id" value="${id}">
+                        <button type="submit" class="btnPanierImg-btn">
+                            <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
+                        </button>
+                    </form>`;
+                        const newForm = btnDiv.querySelector('form');
+                        attachCartFeedback(newForm);
+                    }
+                }
             } else {
                 btnDiv.innerHTML = `<span class="btnPanierImg--disabled">Rupture de stock</span>`;
             }
