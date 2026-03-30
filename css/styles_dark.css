@@ -401,7 +401,7 @@ main {
   color: #ffaaaa;
 }
 
-body.blurred > *:not(#authModalOverlay) {
+body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   filter: blur(2px);
   transition: filter 0.2s ease;
 }

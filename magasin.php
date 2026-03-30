@@ -44,7 +44,7 @@ require_once 'BD/bd.php';
 
         </div>
 
-        <div class="item-grid-4" id="itemGrid" style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between;" >
+        <div class="item-grid-4" id="itemGrid">
             <?php
             $products = AfficherItems();
             if (!is_array($products))
@@ -78,7 +78,14 @@ require_once 'BD/bd.php';
                 ?>
                 <div class="itemBox" data-type="<?= htmlspecialchars($typeLabel) ?>" data-price="<?= $price ?>"
                     data-name="<?= htmlspecialchars(strtolower($nom)) ?>">
-                    <div class="item-img-wrapper">
+                    <div class="item-img-wrapper" style="cursor:pointer;" onclick="openItemModal(
+        '<?= htmlspecialchars($image, ENT_QUOTES) ?>',
+        '<?= htmlspecialchars($nom, ENT_QUOTES) ?>',
+        '<?= htmlspecialchars($typeLabel, ENT_QUOTES) ?>',
+        <?= $quantity ?>,
+        <?= $price ?>,
+        <?= intval($id) ?>
+    )">
                         <img class="item-img" src="<?= htmlspecialchars($image) ?>" alt="<?= htmlspecialchars($nom) ?>">
                     </div>
                     <div class="item-info">
@@ -96,7 +103,7 @@ require_once 'BD/bd.php';
                                     </button>
                                 </form>
                             <?php else: ?>
-                                <span class="btnPanierImg btnPanierImg--disabled">Rupture de stock</span>
+                                <span class="btnPanierImg--disabled">Rupture de stock</span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -109,6 +116,23 @@ require_once 'BD/bd.php';
 
     <?php require 'include/footer.php'; ?>
     <iframe name="panier-frame" style="display:none;"></iframe>
+
+    <!-- Item detail modal -->
+    <div id="itemModalOverlay" class="modal-overlay" aria-hidden="true">
+        <div class="modal">
+            <button id="closeItemModalBtn" class="modal-close" type="button">&times;</button>
+            <div id="itemModalContent" style="text-align:center;">
+                <div class="item-img-wrapper" style="border-radius:10px; overflow:hidden; margin-bottom:16px;">
+                    <img id="modalImg" src="" alt="" class="item-img" style="transform:scale(1);">
+                </div>
+                <h2 id="modalNom" class="titre" style="margin-bottom:8px;"></h2>
+                <p id="modalType" class="item-type"></p>
+                <p id="modalQte" class="description"></p>
+                <p id="modalPrix" class="prixOr"></p>
+                <div id="modalBtn" class="btnPanier" style="margin-top:16px;"></div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // ---- CART FEEDBACK ----
@@ -160,6 +184,66 @@ require_once 'BD/bd.php';
         }
 
         document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+        // ---- ITEM MODAL ----
+        const itemOverlay = document.getElementById('itemModalOverlay');
+        document.getElementById('closeItemModalBtn').addEventListener('click', () => {
+            itemOverlay.classList.remove('visible');
+            itemOverlay.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('blurred');
+        });
+        itemOverlay.addEventListener('click', function (e) {
+            if (e.target === itemOverlay) {
+                itemOverlay.classList.remove('visible');
+                itemOverlay.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('blurred');
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && itemOverlay.classList.contains('visible')) {
+                itemOverlay.classList.remove('visible');
+                itemOverlay.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('blurred');
+            }
+        });
+
+        function openItemModal(image, nom, type, qte, prix, id) {
+            document.getElementById('modalImg').src = image;
+            document.getElementById('modalImg').alt = nom;
+            document.getElementById('modalImg').style.cssText = 'width:100%; height:320px; object-fit:contain; background:#151515; border-radius:10px; margin-bottom:16px;';
+            document.getElementById('modalNom').textContent = nom;
+            document.getElementById('modalType').textContent = 'Type : ' + type;
+            document.getElementById('modalQte').textContent = 'Quantité : ' + qte;
+            document.getElementById('modalPrix').textContent = prix.toLocaleString() + ' gold';
+
+            const btnDiv = document.getElementById('modalBtn');
+            if (qte > 0) {
+                btnDiv.innerHTML = `
+            <form method="GET" action="panier.php" target="panier-frame">
+                <input type="hidden" name="action" value="add">
+                <input type="hidden" name="id" value="${id}">
+                <button type="submit" class="btnPanierImg-btn">
+                    <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
+                </button>
+            </form>`;
+                btnDiv.querySelector('form').addEventListener('submit', function () {
+                    const img = this.querySelector('.btnPanierImg');
+                    const btn = this.querySelector('.btnPanierImg-btn');
+                    img.style.display = 'none';
+                    const msg = document.createElement('span');
+                    msg.textContent = 'Ajouté !';
+                    msg.className = 'cart-feedback-msg';
+                    btn.appendChild(msg);
+                    setTimeout(() => { img.style.display = ''; msg.remove(); }, 1500);
+                });
+            } else {
+                btnDiv.innerHTML = `<span class="btnPanierImg--disabled">Rupture de stock</span>`;
+            }
+
+            itemOverlay.classList.add('visible');
+            itemOverlay.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('blurred');
+        }
     </script>
 </body>
 
