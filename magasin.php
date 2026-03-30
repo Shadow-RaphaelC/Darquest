@@ -34,6 +34,11 @@ require_once 'BD/bd.php';
                         onchange="applyFilters()"> Sorts</label>
             </div>
             <div class="radioButtons">
+                <!-- <label class="filter-radio"><input type="radio" name="sort" value="no_sort" onchange="applyFilters()"
+                        checked>
+                    Aucun tri
+                </label> --> 
+
                 <label class="filter-radio"><input type="radio" name="sort" value="price_asc" onchange="applyFilters()">
                     Prix croissant
                 </label>
@@ -44,7 +49,8 @@ require_once 'BD/bd.php';
 
         </div>
 
-        <div class="item-grid-4" id="itemGrid" style="display:flex; flex-wrap:wrap; gap:16px; justify-content:space-around;">
+        <div class="item-grid-4" id="itemGrid"
+            style="display:flex; flex-wrap:wrap; gap:16px; justify-content:space-around;">
             <?php
             $products = AfficherItems();
             if (!is_array($products))
