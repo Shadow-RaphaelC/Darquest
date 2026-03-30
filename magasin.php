@@ -210,7 +210,7 @@ require_once 'BD/bd.php';
         function openItemModal(image, nom, type, qte, prix, id) {
             document.getElementById('modalImg').src = image;
             document.getElementById('modalImg').alt = nom;
-            document.getElementById('modalImg').style.cssText = 'width:100%; height:320px; object-fit:contain; background:#151515; border-radius:10px; margin-bottom:16px;';
+            document.getElementById('modalImg').style.cssText = 'height:50px; object-fit:contain; background:#151515; border-radius:10px; margin-bottom:16px;';
             document.getElementById('modalNom').textContent = nom;
             document.getElementById('modalType').textContent = 'Type : ' + type;
             document.getElementById('modalQte').textContent = 'Quantité : ' + qte;
