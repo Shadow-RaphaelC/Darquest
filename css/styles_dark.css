@@ -481,6 +481,7 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   height: 70px;
   object-fit: contain;
   display: block;
+  margin-bottom: 12px;
 }
 
 .btnVendreImg:hover {
