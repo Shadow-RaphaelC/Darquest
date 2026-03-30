@@ -21,7 +21,6 @@ require_once 'BD/bd.php';
         <div class="shop-filters">
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Rechercher un item" class="search-input">
-                <button class="search-button" onclick="applyFilters()">Search</button>
             </div>
             <div class="checkboxes">
                 <label class="filter-checkbox"><input type="checkbox" name="type" value="Arme"
@@ -34,10 +33,10 @@ require_once 'BD/bd.php';
                         onchange="applyFilters()"> Sorts</label>
             </div>
             <div class="radioButtons">
-                <!-- <label class="filter-radio"><input type="radio" name="sort" value="no_sort" onchange="applyFilters()"
+                <label class="filter-radio"><input type="radio" name="sort" value="no_sort" onchange="applyFilters()"
                         checked>
                     Aucun tri
-                </label> --> 
+                </label>
 
                 <label class="filter-radio"><input type="radio" name="sort" value="price_asc" onchange="applyFilters()">
                     Prix croissant
@@ -83,7 +82,7 @@ require_once 'BD/bd.php';
                     $typeLabel = 'Autre';
                 ?>
                 <div class="itemBox" data-type="<?= htmlspecialchars($typeLabel) ?>" data-price="<?= $price ?>"
-                    data-name="<?= htmlspecialchars(strtolower($nom)) ?>">
+                    data-name="<?= htmlspecialchars(strtolower($nom)) ?>" data-order="<?= htmlspecialchars($p[0] ?? '') ?>">
                     <div class="item-img-wrapper" style="cursor:pointer;" onclick="openItemModal(
         '<?= htmlspecialchars($image, ENT_QUOTES) ?>',
         '<?= htmlspecialchars($nom, ENT_QUOTES) ?>',
@@ -141,31 +140,38 @@ require_once 'BD/bd.php';
     </div>
 
     <script>
-        // ---- CART FEEDBACK ----
-        document.querySelectorAll('.btnPanier form').forEach(form => {
-            form.addEventListener('submit', function () {
+        // ---- CART FEEDBACK HELPER ----
+        function attachCartFeedback(form) {
+            form.addEventListener('submit', function (e) {
                 const btn = this.querySelector('.btnPanierImg-btn');
                 const img = this.querySelector('.btnPanierImg');
 
-                img.style.display = 'none';
+                if (img && btn) {
+                    img.style.display = 'none';
 
-                const msg = document.createElement('span');
-                msg.textContent = 'Ajouté !';
-                msg.className = 'cart-feedback-msg';
-                btn.appendChild(msg);
+                    const msg = document.createElement('span');
+                    msg.textContent = 'Ajouté !';
+                    msg.className = 'cart-feedback-msg';
+                    btn.appendChild(msg);
 
-                setTimeout(() => {
-                    img.style.display = '';
-                    msg.remove();
-                }, 1500);
-            });
+                    setTimeout(() => {
+                        img.style.display = '';
+                        msg.remove();
+                    }, 1500);
+                }
+            }, { once: true });
+        }
+
+        // Attach feedback to existing cart forms
+        document.querySelectorAll('.btnPanier form').forEach(form => {
+            attachCartFeedback(form);
         });
 
         // ---- FILTERS & SORTING ----
         function applyFilters() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
             const checkedTypes = [...document.querySelectorAll('input[name="type"]:checked')].map(cb => cb.value);
-            const sortValue = document.querySelector('input[name="sort"]:checked')?.value ?? null;
+            const sortValue = document.querySelector('input[name="sort"]:checked')?.value ?? 'no_sort';
 
             const grid = document.getElementById('itemGrid');
             let cards = [...grid.querySelectorAll('.itemBox')];
@@ -176,7 +182,12 @@ require_once 'BD/bd.php';
                 card.style.display = (matchesSearch && matchesType) ? '' : 'none';
             });
 
-            if (sortValue) {
+            if (sortValue === 'no_sort') {
+                cards
+                    .filter(c => c.style.display !== 'none')
+                    .sort((a, b) => parseInt(a.dataset.order) - parseInt(b.dataset.order))
+                    .forEach(card => grid.appendChild(card));
+            } else {
                 cards
                     .filter(c => c.style.display !== 'none')
                     .sort((a, b) => sortValue === 'price_asc'
@@ -232,16 +243,8 @@ require_once 'BD/bd.php';
                     <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
                 </button>
             </form>`;
-                btnDiv.querySelector('form').addEventListener('submit', function () {
-                    const img = this.querySelector('.btnPanierImg');
-                    const btn = this.querySelector('.btnPanierImg-btn');
-                    img.style.display = 'none';
-                    const msg = document.createElement('span');
-                    msg.textContent = 'Ajouté !';
-                    msg.className = 'cart-feedback-msg';
-                    btn.appendChild(msg);
-                    setTimeout(() => { img.style.display = ''; msg.remove(); }, 1500);
-                });
+                const newForm = btnDiv.querySelector('form');
+                attachCartFeedback(newForm);
             } else {
                 btnDiv.innerHTML = `<span class="btnPanierImg--disabled">Rupture de stock</span>`;
             }
