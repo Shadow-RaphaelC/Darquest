@@ -44,7 +44,7 @@ require_once 'BD/bd.php';
 
         </div>
 
-        <div class="item-grid-4" id="itemGrid">
+        <div class="item-grid-4" id="itemGrid" style="display:flex; flex-wrap:wrap; gap:16px; justify-content:space-around;">
             <?php
             $products = AfficherItems();
             if (!is_array($products))

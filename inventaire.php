@@ -35,7 +35,7 @@ require_once 'BD/bd.php';
                 </p>
 
             <?php else: ?>
-                <div class="item-grid-4" id="inventaireGrid">
+                <div class="item-grid-4" id="inventaireGrid" style="display:flex; flex-wrap:wrap; gap:16px; justify-content:center;">
                     <?php foreach ($items as $item):
                         $nom = htmlspecialchars($item['nom']);
                         $qte = (int) $item['quantiteInvenatire'];
