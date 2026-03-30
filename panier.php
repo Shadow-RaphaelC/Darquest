@@ -11,11 +11,12 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
         $quantite = max(1, (int) ($_GET['qte'] ?? 1));
         $alias = $_SESSION['username'];
         $result = AjouterPanier($alias, $idItem, $quantite);
-        if (!$result['success']) {
-            $_SESSION['panier_error'] = $result['message'];
-        }
-        
-        exit;
+        die(json_encode([
+            'alias' => $alias,
+            'idItem' => $idItem,
+            'quantite' => $quantite,
+            'result' => $result,
+        ]));
     }
 
     if ($action === 'remove' && isset($_GET['idItem'])) {
@@ -34,6 +35,26 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
         header('Location: panier.php');
         exit;
     }
+
+    if ($action === 'pay') {
+        $alias = $_SESSION['username'];
+        $result = PayerPanier($alias);
+
+        if ($result['success']) {
+            
+            $coins = GetJoueurCoins($userId);
+            $_SESSION['gold'] = $coins['gold'];
+            $_SESSION['argent'] = $coins['argent'];
+            $_SESSION['bronze'] = $coins['bronze'];
+        }
+
+        $_SESSION['panier_toast'] = [
+            'type' => $result['success'] ? 'success' : 'error',
+            'message' => $result['success'] ? 'Achat effectué !' : $result['message'],
+        ];
+        header('Location: panier.php');
+        exit;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -48,6 +69,19 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
 
 <body>
     <?php require 'include/header.php'; ?>
+
+    <?php if (!empty($_SESSION['panier_toast'])): ?>
+        <?php
+        $toastStyle = $_SESSION['panier_toast']['type'] === 'success'
+            ? 'background:rgba(43,143,43,0.25); border-color:rgba(100,220,100,0.5); color:#adfaad;'
+            : '';
+        ?>
+        <p class="auth-error-banner" style="<?= $toastStyle ?>">
+            <?= htmlspecialchars($_SESSION['panier_toast']['message']) ?>
+        </p>
+        <?php unset($_SESSION['panier_toast']); ?>
+    <?php endif; ?>
+
     <main>
         <h1>Panier</h1>
 
@@ -58,11 +92,6 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
             <p><a class="btnAutre" href="index.php">Accueil</a></p>
 
         <?php else: ?>
-            <div class="btnBox">
-                <a class="btnAutre" href="magasin.php">Magasin</a>
-                <a class="btnAutre" href="inventaire.php">Inventaire</a>
-                <a class="btnAutre" href="index.php">Accueil</a>
-            </div>
 
             <?php if (!empty($_SESSION['panier_error'])): ?>
                 <p class="auth-error-banner"><?= htmlspecialchars($_SESSION['panier_error']) ?></p>
@@ -134,7 +163,10 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
                             <span>Total</span>
                             <span><?= number_format($total, 0, '', '') ?> gold</span>
                         </div>
-                        <a href="#" class="panier-buy-btn disabled">Payer (bientôt disponible)</a>
+                        <form method="GET" action="panier.php">
+                            <input type="hidden" name="action" value="pay">
+                            <button type="submit" class="panier-buy-btn">Payer</button>
+                        </form>
                     </div>
 
                 </div>

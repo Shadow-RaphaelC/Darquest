@@ -89,13 +89,17 @@ function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDi
     echo "    <p class=\"description\">Quantité: " . htmlspecialchars($quantityValue, ENT_QUOTES, 'UTF-8') . "</p>\n";
     echo "    <p class=\"prixOr\">" . htmlspecialchars($priceDisplay, ENT_QUOTES, 'UTF-8') . " gold</p>\n";
     echo "    <div class=\"btnPanier\">\n";
-    echo "      <form method=\"GET\" action=\"panier.php\" target=\"panier-frame\">\n";
-    echo "        <input type=\"hidden\" name=\"action\" value=\"add\">\n";
-    echo "        <input type=\"hidden\" name=\"id\" value=\"" . intval($id) . "\">\n";
-    echo "        <button type=\"submit\" class=\"btnPanierImg-btn\">\n";
-    echo "          <img src=\"img/addToCart.png\" class=\"btnPanierImg\" alt=\"Ajouter au panier\">\n";
-    echo "        </button>\n";
-    echo "      </form>\n";
+    if ($quantityValue > 0) {
+        echo "      <form method=\"GET\" action=\"panier.php\" target=\"panier-frame\">\n";
+        echo "        <input type=\"hidden\" name=\"action\" value=\"add\">\n";
+        echo "        <input type=\"hidden\" name=\"id\" value=\"" . intval($id) . "\">\n";
+        echo "        <button type=\"submit\" class=\"btnPanierImg-btn\">\n";
+        echo "          <img src=\"img/addToCart.png\" class=\"btnPanierImg\" alt=\"Ajouter au panier\">\n";
+        echo "        </button>\n";
+        echo "      </form>\n";
+    } else {
+        echo "      <span class=\"btnPanierImg btnPanierImg--disabled\">Rupture de stock</span>\n";
+    }
     echo "    </div>\n";
     echo "  </div>\n";
     echo "</div>\n";
@@ -214,5 +218,51 @@ function GetJoueurCoins(int $idJoueur): array
     } catch (PDOException $e) {
         error_log('GetJoueurCoins error: ' . $e->getMessage());
         return ['gold' => 0, 'argent' => 0, 'bronze' => 0];
+    }
+}
+
+// -------------------------
+// Payer le Panier
+// -------------------------
+function PayerPanier(string $alias): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    try {
+        $stmt = $pdo->prepare('CALL PayerPanier(:alias)');
+        $stmt->execute([':alias' => $alias]);
+        while ($stmt->nextRowset()) {
+        }
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('PayerPanier error: ' . $e->getMessage());
+        $msg = str_contains($e->getMessage(), 'Or insuffisant')
+            ? 'Or insuffisant pour effectuer cet achat.'
+            : 'Erreur lors du paiement.';
+        return ['success' => false, 'message' => $msg];
+    }
+}
+
+// -------------------------
+// Afficher Inventaire
+// -------------------------
+function AfficherInventaire(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return [];
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT inv.idItem, inv.quantiteInvenatire, i.nom, i.prix, i.image, i.typeItem
+             FROM Inventaire inv
+             JOIN Items i ON i.idItem = inv.idItem
+             WHERE inv.idJoueur = :idJoueur'
+        );
+        $stmt->execute([':idJoueur' => $idJoueur]);
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log('AfficherInventaire error: ' . $e->getMessage());
+        return [];
     }
 }

@@ -86,13 +86,17 @@ require_once 'BD/bd.php';
                         <p class="description">Quantité : <?= $quantity ?></p>
                         <p class="prixOr"><?= number_format($price, 0, '', '') ?> gold</p>
                         <div class="btnPanier">
-                            <form method="GET" action="panier.php" target="panier-frame">
-                                <input type="hidden" name="action" value="add">
-                                <input type="hidden" name="id" value="<?= intval($id) ?>">
-                                <button type="submit" class="btnPanierImg-btn" onclick="cartFeedback(this)">
-                                    <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
-                                </button>
-                            </form>
+                            <?php if ($quantity > 0): ?>
+                                <form method="GET" action="panier.php" target="panier-frame">
+                                    <input type="hidden" name="action" value="add">
+                                    <input type="hidden" name="id" value="<?= intval($id) ?>">
+                                    <button type="submit" class="btnPanierImg-btn">
+                                        <img src="img/addToCart.png" class="btnPanierImg" alt="Ajouter au panier">
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <span class="btnPanierImg btnPanierImg--disabled">Rupture de stock</span>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -107,21 +111,24 @@ require_once 'BD/bd.php';
 
     <script>
         // ---- CART FEEDBACK ----
-        function cartFeedback(btn) {
-            btn.disabled = true;
-            btn.querySelector('.btnPanierImg').style.display = 'none';
+        document.querySelectorAll('.btnPanier form').forEach(form => {
+            form.addEventListener('submit', function () {
+                const btn = this.querySelector('.btnPanierImg-btn');
+                const img = this.querySelector('.btnPanierImg');
 
-            const msg = document.createElement('span');
-            msg.textContent = 'Ajouté !';
-            msg.className = 'cart-feedback-msg';
-            btn.appendChild(msg);
+                img.style.display = 'none';
 
-            setTimeout(() => {
-                btn.querySelector('.btnPanierImg').style.display = '';
-                msg.remove();
-                btn.disabled = false;
-            }, 1500);
-        }
+                const msg = document.createElement('span');
+                msg.textContent = 'Ajouté !';
+                msg.className = 'cart-feedback-msg';
+                btn.appendChild(msg);
+
+                setTimeout(() => {
+                    img.style.display = '';
+                    msg.remove();
+                }, 1500);
+            });
+        });
 
         // ---- FILTERS & SORTING ----
         function applyFilters() {
