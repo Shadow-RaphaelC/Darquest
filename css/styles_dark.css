@@ -511,6 +511,7 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   max-width: 400px;
   border-radius: 10px;
   height: 70px;
+  image-resolution: 200dpi;
   object-fit: contain;
   display: block;
   margin-bottom: 12px;
@@ -991,4 +992,75 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
 .site-footer .footer-subtext {
   font-size: 12px;
   opacity: 0.85;
+}
+
+/* ENIGMA */ 
+.pageBox {
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  text-align: center;
+  background-color: #a48CEB;
+  width: min(90vw, 1420px);
+}
+
+.statBox {
+  background-color: rgb(162, 202, 102);
+  width: 55%;
+  height: 40px;
+  color: black;
+  border: 2px solid rgb(255, 255, 255);
+  margin: 0px auto 5px auto;
+  line-height: 40px;
+}
+
+.enigmeBox {
+  justify-content: center;
+  align-items: center;
+  background-color: #a48CEB;
+  width: 67%;
+  height: 100px;
+  margin: 0px auto 20px auto;
+  text-align: center;
+  line-height: 100px;
+  font-size: clamp(1rem, 2.5vw, 1.7rem);
+  font-variant: small-caps;
+  border: 2px solid #fff;
+  color: #fff;
+  text-decoration: none;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+}
+
+.enigmaBtnBox {
+  display: flex;
+  flex-wrap : wrap;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  height: 150px;
+}
+
+.enigmaBtn {
+  background-color: rgba(255, 255, 255, 0.5);
+  width: 33%;
+  max-width: 840px;
+  height: 100px;
+  text-align: center;
+  line-height: 100px;
+  font-size: clamp(1rem, 2.5vw, 1.7rem);
+  font-variant: small-caps;
+  border: 2px solid #fff;
+  color: #fff;
+  text-decoration: none;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+}
+
+.enigmaBtn:hover {
+  background-color: #fff;
+  color: #151521;
+  cursor: pointer;
 }
