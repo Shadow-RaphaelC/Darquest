@@ -17,9 +17,23 @@ require_once 'BD/bd.php';
     <?php require 'include/header.php'; ?>
     <main>
         <h1>Enigma</h1>
-        <p>Page Enigma.</p>
-        <div class="btnBox" style="justify-content: center; gap: 20px;">
-            <a class="btnAutre" href="index.php">Retour à l'accueil</a>
+
+        <div class="statBox">
+            type d'enigme: mage
+        </div>
+        <div class="enigmeBox">
+            bonjour
+        </div>
+
+        <div class="enigmaBtnBox">
+            <a class="enigmaBtn">reponse 1</a>
+            <a class="enigmaBtn">reponse 2</a>
+
+        </div>
+             
+        <div class="enigmaBtnBox">
+           <a class="enigmaBtn">reponse 3</a>
+            <a class="enigmaBtn">reponse 4</a>
         </div>
     </main>
     <?php require 'include/footer.php'; ?>
