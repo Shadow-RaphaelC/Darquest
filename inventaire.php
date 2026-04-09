@@ -77,7 +77,7 @@ require_once 'BD/bd.php';
                             </div>
                             <div class="btnPanier">
                                 <a href="inventaire.php?action=sell&idItem=<?= (int) $item['idItem'] ?>" class="btnVendreImg-btn">
-                                    <img src="img/addToCart.png" class="btnVendreImg" alt="Vendre">
+                                    <img src="img/removeFromInv.png" class="btnVendreImg" alt="Vendre">
                                 </a>
                             </div>
                         </div>
