@@ -150,12 +150,39 @@ require_once 'BD/bd.php';
                 <p id="modalType" class="item-type"></p>
                 <p id="modalQte" class="description"></p>
                 <p id="modalPrix" class="prixOr"></p>
+                <div id="modalDetails"></div>
                 <div id="modalBtn" class="btnPanier" style="margin-top:16px;"></div>
             </div>
         </div>
     </div>
 
     <script>
+        // ---- ITEM SUB-DETAILS ----
+        const itemDetails = <?= json_encode(GetAllItemsSubDetails()) ?>;
+
+        function renderItemDetails(details) {
+            if (!details || !details.category) return '';
+            let rows = '';
+            if (details.category === 'sort') {
+                rows += `<tr><td>Type de sort</td><td>${details.typeDescription}</td></tr>`;
+                rows += `<tr><td>Points de vie</td><td>${details.ptVie}</td></tr>`;
+                rows += `<tr><td>Points de dégâts</td><td>${details.ptDegat}</td></tr>`;
+                rows += `<tr><td>Instantané</td><td>${details.estInstantane ? 'Oui' : 'Non'}</td></tr>`;
+                rows += `<tr><td>Rareté</td><td>${details.rarete}</td></tr>`;
+            } else if (details.category === 'arme') {
+                rows += `<tr><td>Efficacité</td><td>${details.efficacite}</td></tr>`;
+                rows += `<tr><td>Genre</td><td>${details.genre}</td></tr>`;
+                if (details.description) rows += `<tr><td>Description</td><td>${details.description}</td></tr>`;
+            } else if (details.category === 'potion') {
+                rows += `<tr><td>Effet</td><td>${details.effet}</td></tr>`;
+                rows += `<tr><td>Durée</td><td>${details.duree} tours</td></tr>`;
+            } else if (details.category === 'armure') {
+                rows += `<tr><td>Matière</td><td>${details.matiere}</td></tr>`;
+                rows += `<tr><td>Taille</td><td>${details.taille}</td></tr>`;
+            }
+            return rows ? `<table class="modal-details-table">${rows}</table>` : '';
+        }
+
         // ---- USER STATE ----
         const isLoggedIn = <?= isset($_SESSION['logged_in']) && $_SESSION['logged_in'] ? 'true' : 'false' ?>;
         const userId = <?= isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : '0' ?>;
@@ -262,6 +289,7 @@ require_once 'BD/bd.php';
             document.getElementById('modalType').textContent = 'Type : ' + type;
             document.getElementById('modalQte').textContent = 'Quantité : ' + qte;
             document.getElementById('modalPrix').textContent = prix.toLocaleString() + ' gold';
+            document.getElementById('modalDetails').innerHTML = renderItemDetails(itemDetails[id] || {});
 
             const btnDiv = document.getElementById('modalBtn');
             if (qte > 0) {
