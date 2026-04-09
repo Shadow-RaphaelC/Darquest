@@ -323,6 +323,38 @@ main {
   z-index: 1000;
 }
 
+.modal {
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+.modal-details-table {
+  width: 100%;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: left;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 4px;
+}
+
+.modal-details-table td {
+  padding: 5px 8px;
+  color: #ccc;
+  vertical-align: top;
+}
+
+.modal-details-table td:first-child {
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+  width: 40%;
+}
+
+.modal-details-table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .modal-close {
   position: absolute;
   top: 10px;

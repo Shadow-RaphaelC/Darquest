@@ -54,6 +54,82 @@ function AfficherItems(): array
 }
 
 // -------------------------
+// Get All Items Sub-Details
+// -------------------------
+function GetAllItemsSubDetails(): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return [];
+
+    $details = [];
+    $details['__sortsError'] = null;
+
+    try {
+        $stmt = $pdo->query(
+            'SELECT s.idItem, ts.Description AS typeDescription, ts.ptVie, ts.ptDegat,
+                    s.estInstantane, s.rarete
+             FROM Sorts s
+             JOIN TypeSorts ts ON ts.typeSorts = s.typeSorts'
+        );
+        foreach ($stmt->fetchAll() as $row) {
+            $details[(int)$row['idItem']] = [
+                'category'        => 'sort',
+                'typeDescription' => $row['typeDescription'],
+                'ptVie'           => (int)$row['ptVie'],
+                'ptDegat'         => (int)$row['ptDegat'],
+                'estInstantane'    => (bool)$row['estInstantane'],
+                'rarete'          => (int)$row['rarete'],
+            ];
+        }
+    } catch (PDOException $e) {
+        error_log('GetAllItemsSubDetails Sorts error: ' . $e->getMessage());
+        $details['__sortsError'] = $e->getMessage();
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT idItem, efficacite, genre, description FROM Armes');
+        foreach ($stmt->fetchAll() as $row) {
+            $details[(int)$row['idItem']] = [
+                'category'    => 'arme',
+                'efficacite'  => $row['efficacite'],
+                'genre'       => $row['genre'],
+                'description' => $row['description'],
+            ];
+        }
+    } catch (PDOException $e) {
+        error_log('GetAllItemsSubDetails Armes error: ' . $e->getMessage());
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT idItem, effet, duree FROM Potions');
+        foreach ($stmt->fetchAll() as $row) {
+            $details[(int)$row['idItem']] = [
+                'category' => 'potion',
+                'effet'    => $row['effet'],
+                'duree'    => (int)$row['duree'],
+            ];
+        }
+    } catch (PDOException $e) {
+        error_log('GetAllItemsSubDetails Potions error: ' . $e->getMessage());
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT idItem, matiere, taille FROM Armures');
+        foreach ($stmt->fetchAll() as $row) {
+            $details[(int)$row['idItem']] = [
+                'category' => 'armure',
+                'matiere'  => $row['matiere'],
+                'taille'   => $row['taille'],
+            ];
+        }
+    } catch (PDOException $e) {
+        error_log('GetAllItemsSubDetails Armures error: ' . $e->getMessage());
+    }
+
+    return $details;
+}
+
+// -------------------------
 // Get Shop Stock Map
 // -------------------------
 function GetItemsStockMap(): array
