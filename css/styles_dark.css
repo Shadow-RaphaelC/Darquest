@@ -669,6 +669,12 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   background: rgba(255, 255, 255, 0.3);
 }
 
+.panier-item-btn--disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .panier-remove-btn {
   font-size: 0.78rem;
   opacity: 0.55;

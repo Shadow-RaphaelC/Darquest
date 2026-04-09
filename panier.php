@@ -111,6 +111,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
             <?php
             $userId = (int) $_SESSION['user_id'];
             $items = AfficherPanier($userId);
+            $stockMap = GetItemsStockMap();
             $total = 0;
             ?>
 
@@ -130,6 +131,9 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
                             $image = htmlspecialchars($item['image']);
                             $sous = $prix * $qte;
                             $total += $sous;
+                            $stockShop = $stockMap[$idItem] ?? 0;
+                            $canIncrease = $qte < $stockShop;
+                            $canDecrease = $qte > 1;
                             ?>
                             <div class="panier-item">
                                 <div class="panier-item-left">
@@ -141,11 +145,19 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
                                 </div>
                                 <div class="panier-item-right">
                                     <div class="panier-item-quantity">
-                                        <a href="panier.php?action=update&idItem=<?= $idItem ?>&qte=<?= $qte - 1 ?>"
-                                            class="panier-item-btn">−</a>
+                                        <?php if ($canDecrease): ?>
+                                            <a href="panier.php?action=update&idItem=<?= $idItem ?>&qte=<?= $qte - 1 ?>"
+                                                class="panier-item-btn">−</a>
+                                        <?php else: ?>
+                                            <span class="panier-item-btn panier-item-btn--disabled">−</span>
+                                        <?php endif; ?>
                                         <span><?= $qte ?></span>
-                                        <a href="panier.php?action=update&idItem=<?= $idItem ?>&qte=<?= $qte + 1 ?>"
-                                            class="panier-item-btn">+</a>
+                                        <?php if ($canIncrease): ?>
+                                            <a href="panier.php?action=update&idItem=<?= $idItem ?>&qte=<?= $qte + 1 ?>"
+                                                class="panier-item-btn">+</a>
+                                        <?php else: ?>
+                                            <span class="panier-item-btn panier-item-btn--disabled">+</span>
+                                        <?php endif; ?>
                                     </div>
                                     <a href="panier.php?action=remove&idItem=<?= $idItem ?>" class="panier-remove-btn">Retirer</a>
                                 </div>

@@ -53,6 +53,23 @@ function AfficherItems(): array
     }
 }
 
+// -------------------------
+// Get Shop Stock Map
+// -------------------------
+function GetItemsStockMap(): array
+{
+    $rows = AfficherItems();
+    $map = [];
+    foreach ($rows as $row) {
+        $idItem = (int) ($row[0] ?? 0);
+        $stock = (int) ($row[2] ?? 0);
+        if ($idItem > 0) {
+            $map[$idItem] = $stock;
+        }
+    }
+    return $map;
+}
+
 function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDisponible)
 {
     $isDisponibleNormalized = filter_var($isDisponible, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
