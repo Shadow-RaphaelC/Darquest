@@ -330,9 +330,7 @@ function PayerPanier(string $alias): array
         return ['success' => true];
     } catch (PDOException $e) {
         error_log('PayerPanier error: ' . $e->getMessage());
-        $msg = str_contains($e->getMessage(), 'Or insuffisant')
-            ? 'Or insuffisant pour effectuer cet achat.'
-            : 'Erreur lors du paiement.';
+        $msg = $e->getMessage();
         return ['success' => false, 'message' => $msg];
     }
 }
