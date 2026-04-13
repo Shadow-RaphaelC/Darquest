@@ -50,9 +50,13 @@ if ($currentPage === 'panier.php') {
         <!-- Left: page nav buttons -->
         <nav class="headerNavLeft">
             <?php if ($loggedIn && !empty($navLinks)): ?>
-                <?php foreach ($navLinks as $href => $label): ?>
-                    <a class="headerBtn" href="<?= $href ?>"><?= $label ?></a>
-                <?php endforeach; ?>
+                <div>
+                    <?php foreach ($navLinks as $href => $label): ?>
+                        <a class="headerBtn" href="<?= $href ?>">
+                            <?= $label ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
         </nav>
 
