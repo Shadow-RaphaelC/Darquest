@@ -78,11 +78,15 @@ if ($currentPage === 'panier.php') {
                 <a class="user-profile" href="profil.php">
 
                     <nav class="headerNavMiddle">
+                        <?php
+                        $pv    = (int)($_SESSION['pointDeVie'] ?? 0);
+                        $maxHP = (int)($_SESSION['maxHP']       ?? 100);
+                        $pvPct = $maxHP > 0 ? (int)round($pv / $maxHP * 100) : 0;
+                        $pvPct = min(100, max(0, $pvPct));
+                        ?>
                         <div class="hpBarBox">
-                            <div class="hpBar">
-                                <div class="hpText">
-                                    PV: <?= $_SESSION['pointDeVie'] ?? 0 ?>
-                                </div>
+                            <div class="hpBar" style="width: <?= $pvPct ?>%;">
+                                <div class="hpText">PV: <?= $pv ?></div>
                             </div>
                         </div>
                     </nav>

@@ -66,13 +66,17 @@ if (!$user || !password_verify($password, $user['motDePasse'])) {
     $_SESSION['username']  = $user['alias'];
     $_SESSION['is_admin']  = (bool)$user['estAdmin'];
 
-    // Load coins into session
+    // Load coins and HP into session
     $coins = GetJoueurCoins((int)$_SESSION['user_id']);
-    $_SESSION['gold']   = $coins['gold'];
-    $_SESSION['argent'] = $coins['argent'];
-    $_SESSION['bronze'] = $coins['bronze'];
+    $_SESSION['gold']        = $coins['gold'];
+    $_SESSION['argent']      = $coins['argent'];
+    $_SESSION['bronze']      = $coins['bronze'];
+    $hp = GetJoueurHP((int)$_SESSION['user_id']);
+    $_SESSION['pointDeVie']  = (int)($hp['pointDeVie'] ?? 0);
+    $_SESSION['maxHP']       = (int)($hp['maxHP']       ?? 100);
 
-    header('Location: index.php');
+    $redirect = $_SERVER['HTTP_REFERER'] ?? 'index.php';
+    header('Location: ' . $redirect);
     exit;
 }
 
@@ -154,25 +158,29 @@ if ($mode === 'signup') {
     $_SESSION['logged_in'] = true;
     $_SESSION['username']  = $alias;
     $_SESSION['is_admin']  = false;
-    
-    // Load coins into session
-    $coins = GetJoueurCoins((int)$_SESSION['user_id']);
-    $_SESSION['gold']   = $coins['gold'];
-    $_SESSION['argent'] = $coins['argent'];
-    $_SESSION['bronze'] = $coins['bronze'];
 
+    // Set user_id first so coins/HP queries work
     if (!empty($newUser['idJoueur'])) {
-        $_SESSION['user_id'] = $newUser['idJoueur'];
+        $_SESSION['user_id'] = (int)$newUser['idJoueur'];
     } else {
         $idStmt = $pdo->prepare(
             'SELECT idJoueur FROM Joueurs WHERE alias = :alias LIMIT 1'
         );
         $idStmt->execute([':alias' => $alias]);
         $row = $idStmt->fetch(PDO::FETCH_ASSOC);
-        $_SESSION['user_id'] = $row['idJoueur'] ?? null;
+        $_SESSION['user_id'] = (int)($row['idJoueur'] ?? 0);
     }
 
-    header('Location: index.php');
+    // Load coins and HP into session
+    $coins = GetJoueurCoins((int)$_SESSION['user_id']);
+    $_SESSION['gold']       = $coins['gold'];
+    $_SESSION['argent']     = $coins['argent'];
+    $_SESSION['bronze']     = $coins['bronze'];
+    $hp = GetJoueurHP((int)$_SESSION['user_id']);
+    $_SESSION['pointDeVie'] = (int)($hp['pointDeVie'] ?? 0);
+
+    $redirect = $_SERVER['HTTP_REFERER'] ?? 'index.php';
+    header('Location: ' . $redirect);
     exit;
 }
 

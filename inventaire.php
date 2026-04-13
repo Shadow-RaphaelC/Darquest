@@ -137,8 +137,8 @@ if (isset($_SESSION['inv_flash'])) {
                                     <input type="hidden" name="idItem" value="<?= (int) $item['idItem'] ?>">
                                     <div class="sell-qty-control">
                                         <button type="button" class="qty-btn qty-minus">−</button>
-                                        <input type="number" name="quantite" class="qty-input"
-                                               value="1" min="1" max="<?= $qte ?>">
+                                        <input type="text" inputmode="numeric" name="quantite" class="qty-input"
+                                               value="1" data-min="1" data-max="<?= $qte ?>">
                                         <button type="button" class="qty-btn qty-plus">+</button>
                                     </div>
                                     <button type="submit" class="btnVendreImg-btn">
@@ -158,29 +158,22 @@ if (isset($_SESSION['inv_flash'])) {
         document.querySelectorAll('.sell-qty-control').forEach(function (ctrl) {
             const input = ctrl.querySelector('.qty-input');
             ctrl.querySelector('.qty-minus').addEventListener('click', function () {
-                const min = parseInt(input.min) || 1;
+                const min = parseInt(input.dataset.min) || 1;
                 input.value = Math.max(min, (parseInt(input.value) || 1) - 1);
-                console.log('[SELL] qty changed to', input.value);
             });
             ctrl.querySelector('.qty-plus').addEventListener('click', function () {
-                const max = parseInt(input.max) || 999;
+                const max = parseInt(input.dataset.max) || 999;
                 input.value = Math.min(max, (parseInt(input.value) || 1) + 1);
-                console.log('[SELL] qty changed to', input.value);
             });
         });
 
-        // Sell form — fetch-based so we can log every stage
+        // Sell form — fetch-based
         document.querySelectorAll('.sell-form').forEach(function (form) {
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
 
-                const idItem   = form.querySelector('[name="idItem"]').value;
-                const quantite = form.querySelector('.qty-input').value;
-                console.log('[SELL] → submitting', { idItem, quantite });
-
                 fetch('inventaire.php', { method: 'POST', body: new FormData(form) })
                     .then(function (res) {
-                        console.log('[SELL] HTTP status:', res.status);
                         if (!res.ok) {
                             return res.text().then(function (t) {
                                 throw new Error('HTTP ' + res.status + ': ' + t.slice(0, 200));
@@ -189,12 +182,9 @@ if (isset($_SESSION['inv_flash'])) {
                         return res.json();
                     })
                     .then(function (data) {
-                        console.log('[SELL] Response:', data);
                         if (data.success) {
-                            // Update gold in header without full reload
                             const goldEl = document.querySelector('.coins .gold');
                             if (goldEl) goldEl.textContent = data.newGold;
-
                             showFlash('Vendu ! +' + data.gold + ' gold', 'success');
                             setTimeout(function () { location.reload(); }, 1200);
                         } else {
@@ -202,8 +192,7 @@ if (isset($_SESSION['inv_flash'])) {
                         }
                     })
                     .catch(function (err) {
-                        console.error('[SELL] Fetch error:', err);
-                        showFlash('Erreur réseau — voir console', 'error');
+                        showFlash('Erreur réseau', 'error');
                     });
             });
         });
