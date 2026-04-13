@@ -178,6 +178,7 @@ if ($mode === 'signup') {
     $_SESSION['bronze']     = $coins['bronze'];
     $hp = GetJoueurHP((int)$_SESSION['user_id']);
     $_SESSION['pointDeVie'] = (int)($hp['pointDeVie'] ?? 0);
+    $_SESSION['maxHP']      = (int)($hp['maxHP']       ?? 100);
 
     $redirect = $_SERVER['HTTP_REFERER'] ?? 'index.php';
     header('Location: ' . $redirect);

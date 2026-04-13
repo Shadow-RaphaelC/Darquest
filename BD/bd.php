@@ -307,7 +307,12 @@ function GetJoueurCoins(int $idJoueur): array
         );
         $stmt->execute([':id' => $idJoueur]);
         $row = $stmt->fetch();
-        return $row ?: ['gold' => 0, 'argent' => 0, 'bronze' => 0];
+        if (!$row) return ['gold' => 0, 'argent' => 0, 'bronze' => 0];
+        return [
+            'gold'   => (int)$row['gold'],
+            'argent' => (int)$row['argent'],
+            'bronze' => (int)$row['bronze'],
+        ];
     } catch (PDOException $e) {
         error_log('GetJoueurCoins error: ' . $e->getMessage());
         return ['gold' => 0, 'argent' => 0, 'bronze' => 0];
@@ -474,17 +479,30 @@ function GetJoueurHP(int $idJoueur): array
 {
     $pdo = get_pdo();
     if ($pdo === false)
-        return ['pointDeVie' => 0];
+        return ['pointDeVie' => 0, 'maxHP' => 100];
     try {
         $stmt = $pdo->prepare(
             'SELECT pointDeVie, maxHP FROM Joueurs WHERE idJoueur = :id LIMIT 1'
         );
         $stmt->execute([':id' => $idJoueur]);
         $row = $stmt->fetch();
-        return $row ?: ['pointDeVie' => 0, 'maxHP' => 100];
+        if (!$row) return ['pointDeVie' => 0, 'maxHP' => 100];
+        return [
+            'pointDeVie' => (int)($row['pointDeVie'] ?? 0),
+            'maxHP'       => (int)($row['maxHP']       ?? 100),
+        ];
     } catch (PDOException $e) {
         error_log('GetJoueurHP error: ' . $e->getMessage());
-        return ['pointDeVie' => 0];
+        // maxHP column may not exist — try fetching only pointDeVie
+        try {
+            $stmt = $pdo->prepare('SELECT pointDeVie FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+            $stmt->execute([':id' => $idJoueur]);
+            $row = $stmt->fetch();
+            return ['pointDeVie' => (int)($row['pointDeVie'] ?? 0), 'maxHP' => 100];
+        } catch (PDOException $e2) {
+            error_log('GetJoueurHP fallback error: ' . $e2->getMessage());
+            return ['pointDeVie' => 0, 'maxHP' => 100];
+        }
     }
 }
 

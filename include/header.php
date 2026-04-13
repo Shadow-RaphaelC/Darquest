@@ -79,14 +79,17 @@ if ($currentPage === 'panier.php') {
 
                     <nav class="headerNavMiddle">
                         <?php
-                        $pv    = (int)($_SESSION['pointDeVie'] ?? 0);
-                        $maxHP = (int)($_SESSION['maxHP']       ?? 100);
+                        $hp    = GetJoueurHP((int)$_SESSION['user_id']);
+                        $_SESSION['pointDeVie'] = $hp['pointDeVie'];
+                        $_SESSION['maxHP']      = $hp['maxHP'];
+                        $pv    = $hp['pointDeVie'];
+                        $maxHP = $hp['maxHP'];
                         $pvPct = $maxHP > 0 ? (int)round($pv / $maxHP * 100) : 0;
                         $pvPct = min(100, max(0, $pvPct));
                         ?>
                         <div class="hpBarBox">
                             <div class="hpBar" style="width: <?= $pvPct ?>%;">
-                                <div class="hpText">PV: <?= $pv ?></div>
+                                <div class="hpText">PV: <?= $pv ?>/<?= $maxHP ?></div>
                             </div>
                         </div>
                     </nav>

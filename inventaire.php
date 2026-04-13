@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'sell'
         'userId'   => $userId,
         'idItem'   => $idItem,
         'quantite' => $quantite,
-        'newGold'  => $_SESSION['gold'] ?? 0,
+        'newGold'  => (int)($_SESSION['gold'] ?? 0),
     ]));
     exit;
 }
@@ -184,9 +184,9 @@ if (isset($_SESSION['inv_flash'])) {
                     .then(function (data) {
                         if (data.success) {
                             const goldEl = document.querySelector('.coins .gold');
-                            if (goldEl) goldEl.textContent = data.newGold;
+                            if (goldEl) goldEl.textContent = parseInt(data.newGold, 10);
                             showFlash('Vendu ! +' + data.gold + ' gold', 'success');
-                            setTimeout(function () { location.reload(); }, 1200);
+                            setTimeout(function () { location.reload(); }, 1400);
                         } else {
                             showFlash(data.message || 'Erreur inconnue', 'error');
                         }

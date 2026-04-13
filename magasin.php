@@ -108,12 +108,10 @@ require_once 'BD/bd.php';
                         <p class="prixOr"><?= number_format($price, 0, '', '') ?> gold</p>
                         <div class="btnPanier">
                             <?php if ($quantity > 0): ?>
-                                <?php if ($isSpell && (!$isLogged || !$isMage)): ?>
-                                    <?php if (!$isLogged): ?>
-                                        <span class="btnPanierImg--disabled">Connectez-vous</span>
-                                    <?php else: ?>
-                                        <span class="btnPanierImg--disabled">Vous n'etes pas Mage</span>
-                                    <?php endif; ?>
+                                <?php if (!$isLogged): ?>
+                                    <span class="btnPanierImg--disabled">Connectez-vous</span>
+                                <?php elseif ($isSpell && !$isMage): ?>
+                                    <span class="btnPanierImg--disabled">Vous n'etes pas Mage</span>
                                 <?php else: ?>
                                     <form method="GET" action="panier.php" target="panier-frame">
                                         <input type="hidden" name="action" value="add">
