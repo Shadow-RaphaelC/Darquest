@@ -1184,6 +1184,7 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   align-items: center;
   text-align: left;
   line-height: 30px;
+  border-radius: 4px;
 }
 
 .hpText {
