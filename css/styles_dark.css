@@ -77,6 +77,14 @@ main {
   margin-right: auto;
 }
 
+.headerNavMiddle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .headerNav {
   display: flex;
   justify-content: flex-end;
@@ -1138,3 +1146,26 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   color: #151521;
   cursor: pointer;
 }
+
+.enigmaBtn.unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* HEADER -> HP BAR */
+.hpBarBox{
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: left;
+  width: 100%;
+  height: var(--headerBtn-height);
+  background-color: rgb(17, 7, 7);
+  border: 2px solid red;
+}
+
+.hpBar { 
+  width: 100%;
+  height: auto;
+  background-color: #ff0000;
+} 
