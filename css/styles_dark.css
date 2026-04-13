@@ -79,7 +79,7 @@ main {
 
 .headerNavMiddle {
   display: flex;
-  justify-content: center;
+  justify-content: right;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
@@ -1166,16 +1166,28 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
 /* HEADER -> HP BAR */
 .hpBarBox{
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: left;
-  width: 100%;
-  height: var(--headerBtn-height);
-  background-color: rgb(17, 7, 7);
-  border: 2px solid red;
+  width: 200px;
+  height: 30px;
+  background-color: rgb(156, 156, 156);
+  border: 2px solid rgb(85, 0, 0);
+  border-radius: 6px;
+  margin-left: 4px;
 }
 
 .hpBar { 
   width: 100%;
   height: auto;
-  background-color: #ff0000;
-} 
+  background-color: #bd0000;
+  align-items: center;
+  text-align: left;
+  line-height: 30px;
+  border-radius: 6px;
+}
+
+.hpText {
+  color: black;
+  font-weight: 700;
+  padding-left: 6px;
+}

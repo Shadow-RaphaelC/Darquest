@@ -76,6 +76,17 @@ if ($currentPage === 'panier.php') {
                 <?php endif; ?>
 
                 <a class="user-profile" href="profil.php">
+
+                    <nav class="headerNavMiddle">
+                        <div class="hpBarBox">
+                            <div class="hpBar">
+                                <div class="hpText">
+                                    PV: <?= $_SESSION['pointDeVie'] ?? 0 ?>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                        <span class="user-profile-divider"></span>
                     <div class="coins">
                         <?php
                         $gold = (int) ($_SESSION['gold'] ?? 0);
