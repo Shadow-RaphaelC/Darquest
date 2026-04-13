@@ -2,27 +2,46 @@
 require_once 'include/session.php';
 require_once 'BD/bd.php';
 
-// Handle sell action (POST)
+// Handle sell action (AJAX POST — returns JSON)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'sell') {
-    if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
-        $userId  = (int) $_SESSION['user_id'];
-        $idItem  = (int) ($_POST['idItem'] ?? 0);
-        $quantite = (int) ($_POST['quantite'] ?? 1);
+    header('Content-Type: application/json');
 
-        if ($idItem > 0 && $quantite > 0) {
-            $result = VendreItem($userId, $idItem, $quantite);
-            if ($result['success']) {
-                $coins = GetJoueurCoins($userId);
-                $_SESSION['gold']   = $coins['gold'];
-                $_SESSION['argent'] = $coins['argent'];
-                $_SESSION['bronze'] = $coins['bronze'];
-                $_SESSION['inv_flash'] = ['type' => 'success', 'msg' => 'Vendu ! +' . $result['gold'] . ' gold'];
-            } else {
-                $_SESSION['inv_flash'] = ['type' => 'error', 'msg' => $result['message']];
-            }
-        }
+    if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+        echo json_encode(['success' => false, 'stage' => 'auth', 'message' => 'Non connecté']);
+        exit;
     }
-    header('Location: inventaire.php');
+
+    $userId   = (int) $_SESSION['user_id'];
+    $idItem   = (int) ($_POST['idItem'] ?? 0);
+    $quantite = (int) ($_POST['quantite'] ?? 1);
+
+    if ($idItem <= 0 || $quantite <= 0) {
+        echo json_encode([
+            'success'  => false,
+            'stage'    => 'validation',
+            'message'  => 'Paramètres invalides',
+            'idItem'   => $idItem,
+            'quantite' => $quantite,
+        ]);
+        exit;
+    }
+
+    $result = VendreItem($userId, $idItem, $quantite);
+
+    if ($result['success']) {
+        $coins = GetJoueurCoins($userId);
+        $_SESSION['gold']   = $coins['gold'];
+        $_SESSION['argent'] = $coins['argent'];
+        $_SESSION['bronze'] = $coins['bronze'];
+    }
+
+    echo json_encode(array_merge($result, [
+        'stage'    => 'complete',
+        'userId'   => $userId,
+        'idItem'   => $idItem,
+        'quantite' => $quantite,
+        'newGold'  => $_SESSION['gold'] ?? 0,
+    ]));
     exit;
 }
 
@@ -135,17 +154,71 @@ if (isset($_SESSION['inv_flash'])) {
     </main>
     <?php require 'include/footer.php'; ?>
     <script>
+        // +/- quantity controls
         document.querySelectorAll('.sell-qty-control').forEach(function (ctrl) {
             const input = ctrl.querySelector('.qty-input');
             ctrl.querySelector('.qty-minus').addEventListener('click', function () {
                 const min = parseInt(input.min) || 1;
-                input.value = Math.max(min, parseInt(input.value) - 1);
+                input.value = Math.max(min, (parseInt(input.value) || 1) - 1);
+                console.log('[SELL] qty changed to', input.value);
             });
             ctrl.querySelector('.qty-plus').addEventListener('click', function () {
                 const max = parseInt(input.max) || 999;
-                input.value = Math.min(max, parseInt(input.value) + 1);
+                input.value = Math.min(max, (parseInt(input.value) || 1) + 1);
+                console.log('[SELL] qty changed to', input.value);
             });
         });
+
+        // Sell form — fetch-based so we can log every stage
+        document.querySelectorAll('.sell-form').forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const idItem   = form.querySelector('[name="idItem"]').value;
+                const quantite = form.querySelector('.qty-input').value;
+                console.log('[SELL] → submitting', { idItem, quantite });
+
+                fetch('inventaire.php', { method: 'POST', body: new FormData(form) })
+                    .then(function (res) {
+                        console.log('[SELL] HTTP status:', res.status);
+                        if (!res.ok) {
+                            return res.text().then(function (t) {
+                                throw new Error('HTTP ' + res.status + ': ' + t.slice(0, 200));
+                            });
+                        }
+                        return res.json();
+                    })
+                    .then(function (data) {
+                        console.log('[SELL] Response:', data);
+                        if (data.success) {
+                            // Update gold in header without full reload
+                            const goldEl = document.querySelector('.coins .gold');
+                            if (goldEl) goldEl.textContent = data.newGold;
+
+                            showFlash('Vendu ! +' + data.gold + ' gold', 'success');
+                            setTimeout(function () { location.reload(); }, 1200);
+                        } else {
+                            showFlash(data.message || 'Erreur inconnue', 'error');
+                        }
+                    })
+                    .catch(function (err) {
+                        console.error('[SELL] Fetch error:', err);
+                        showFlash('Erreur réseau — voir console', 'error');
+                    });
+            });
+        });
+
+        function showFlash(msg, type) {
+            let el = document.getElementById('inv-flash-msg');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'inv-flash-msg';
+                document.querySelector('main h1').after(el);
+            }
+            el.className = 'inv-flash inv-flash--' + type;
+            el.textContent = msg;
+            el.style.display = '';
+        }
     </script>
 </body>
 

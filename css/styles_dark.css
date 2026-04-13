@@ -529,6 +529,15 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   background: #f3adad;
 }
 
+.btnVendreImg-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+}
+
 /* >-- SELL QUANTITY CONTROL --< */
 
 .sell-form {
@@ -658,6 +667,7 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   display: flex;
   justify-content: center;
   margin-top: 12px;
+  padding-bottom: 16px;
   width: 100%;
   box-sizing: border-box;
 }

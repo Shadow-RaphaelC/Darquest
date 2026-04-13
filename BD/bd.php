@@ -393,29 +393,35 @@ function VendreItem(int $idJoueur, int $idItem, int $quantite): array
         return ['success' => false, 'message' => 'Erreur de connexion BD.'];
     }
 
+    error_log("[VendreItem] START idJoueur=$idJoueur idItem=$idItem quantite=$quantite");
+
     try {
         $pdo->beginTransaction();
+        error_log("[VendreItem] transaction started");
 
         // Verify inventory ownership and available quantity
         $stmt = $pdo->prepare(
             'SELECT inv.quantiteInvenatire, i.prix, i.typeItem
              FROM Inventaire inv
              JOIN Items i ON i.idItem = inv.idItem
-             WHERE inv.idJoueur = :idJoueur AND inv.idItem = :idItem
-             FOR UPDATE'
+             WHERE inv.idJoueur = :idJoueur AND inv.idItem = :idItem'
         );
         $stmt->execute([':idJoueur' => $idJoueur, ':idItem' => $idItem]);
         $row = $stmt->fetch();
 
         if (!$row) {
+            error_log("[VendreItem] item not found in inventory");
             $pdo->rollBack();
-            return ['success' => false, 'message' => 'Item introuvable dans l\'inventaire.'];
+            return ['success' => false, 'stage' => 'inventory_check', 'message' => 'Item introuvable dans l\'inventaire.'];
         }
 
         $qteDisponible = (int) $row['quantiteInvenatire'];
+        error_log("[VendreItem] found item: prix={$row['prix']} type={$row['typeItem']} qteDisponible=$qteDisponible");
+
         if ($quantite > $qteDisponible) {
+            error_log("[VendreItem] insufficient quantity");
             $pdo->rollBack();
-            return ['success' => false, 'message' => 'Quantité insuffisante dans l\'inventaire.'];
+            return ['success' => false, 'stage' => 'inventory_check', 'message' => 'Quantité insuffisante dans l\'inventaire.'];
         }
 
         // Calculate resell price (spells: +10%, others: -40%)
@@ -423,6 +429,7 @@ function VendreItem(int $idJoueur, int $idItem, int $quantite): array
         $typeCode = strtoupper(trim((string) $row['typeItem']));
         $resellRate = ($typeCode === 'S' || $typeCode === 'SORT') ? 1.10 : 0.60;
         $goldGagne = (int) round($prix * $resellRate * $quantite);
+        error_log("[VendreItem] resell: prix=$prix typeCode=$typeCode rate=$resellRate goldGagne=$goldGagne");
 
         // Remove from inventory (delete row if quantity reaches 0)
         $newQte = $qteDisponible - $quantite;
@@ -445,14 +452,21 @@ function VendreItem(int $idJoueur, int $idItem, int $quantite): array
         );
         $stmt->execute([':gold' => $goldGagne, ':idJoueur' => $idJoueur]);
 
-        // Restore quantity back to shop stock
-        $stmt = $pdo->prepare(
-            'UPDATE Items SET quantite = quantite + :quantite WHERE idItem = :idItem'
-        );
-        $stmt->execute([':quantite' => $quantite, ':idItem' => $idItem]);
-
         $pdo->commit();
+        error_log("[VendreItem] committed — gold added, inventory updated");
 
+        // Restore quantity back to shop stock (outside transaction — best effort)
+        try {
+            $stmt = $pdo->prepare(
+                'UPDATE Items SET quantite = quantite + :quantite WHERE idItem = :idItem'
+            );
+            $stmt->execute([':quantite' => $quantite, ':idItem' => $idItem]);
+            error_log("[VendreItem] shop stock restored");
+        } catch (PDOException $stockErr) {
+            error_log('[VendreItem] stock restore failed (check Items column name): ' . $stockErr->getMessage());
+        }
+
+        error_log("[VendreItem] SUCCESS goldGagne=$goldGagne");
         return ['success' => true, 'gold' => $goldGagne];
 
     } catch (PDOException $e) {
