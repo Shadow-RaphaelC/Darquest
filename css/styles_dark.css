@@ -521,6 +521,80 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   background: #f3adad;
 }
 
+/* >-- SELL QUANTITY CONTROL --< */
+
+.sell-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.sell-qty-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.qty-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #8f2b2b;
+  background: #1e1e2e;
+  color: #f3c9ad;
+  font-size: 1.2rem;
+  line-height: 1;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.qty-btn:hover {
+  background: #8f2b2b;
+  color: #fff;
+}
+
+.qty-input {
+  width: 52px;
+  text-align: center;
+  background: #1e1e2e;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 4px 0;
+  font-size: 1rem;
+}
+
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+/* >-- INVENTORY FLASH MESSAGE --< */
+
+.inv-flash {
+  max-width: 520px;
+  margin: 0 auto 18px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.inv-flash--success {
+  background: #1c3a1c;
+  color: #adf3ad;
+  border: 1px solid #adf3ad;
+}
+
+.inv-flash--error {
+  background: #3a1c1c;
+  color: #f3adad;
+  border: 1px solid #f3adad;
+}
+
 .item-img {
   width: auto;
   height: auto;

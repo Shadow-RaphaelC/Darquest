@@ -380,6 +380,91 @@ function GetItemType(int $idItem): array
 }
 
 // -------------------------
+// Vendre un item de l'inventaire
+// -------------------------
+function VendreItem(int $idJoueur, int $idItem, int $quantite): array
+{
+    if ($quantite <= 0) {
+        return ['success' => false, 'message' => 'Quantité invalide.'];
+    }
+
+    $pdo = get_pdo();
+    if ($pdo === false) {
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // Verify inventory ownership and available quantity
+        $stmt = $pdo->prepare(
+            'SELECT inv.quantiteInvenatire, i.prix, i.typeItem
+             FROM Inventaire inv
+             JOIN Items i ON i.idItem = inv.idItem
+             WHERE inv.idJoueur = :idJoueur AND inv.idItem = :idItem
+             FOR UPDATE'
+        );
+        $stmt->execute([':idJoueur' => $idJoueur, ':idItem' => $idItem]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Item introuvable dans l\'inventaire.'];
+        }
+
+        $qteDisponible = (int) $row['quantiteInvenatire'];
+        if ($quantite > $qteDisponible) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Quantité insuffisante dans l\'inventaire.'];
+        }
+
+        // Calculate resell price (spells: +10%, others: -40%)
+        $prix = (int) $row['prix'];
+        $typeCode = strtoupper(trim((string) $row['typeItem']));
+        $resellRate = ($typeCode === 'S' || $typeCode === 'SORT') ? 1.10 : 0.60;
+        $goldGagne = (int) round($prix * $resellRate * $quantite);
+
+        // Remove from inventory (delete row if quantity reaches 0)
+        $newQte = $qteDisponible - $quantite;
+        if ($newQte <= 0) {
+            $stmt = $pdo->prepare(
+                'DELETE FROM Inventaire WHERE idJoueur = :idJoueur AND idItem = :idItem'
+            );
+            $stmt->execute([':idJoueur' => $idJoueur, ':idItem' => $idItem]);
+        } else {
+            $stmt = $pdo->prepare(
+                'UPDATE Inventaire SET quantiteInvenatire = :qte
+                 WHERE idJoueur = :idJoueur AND idItem = :idItem'
+            );
+            $stmt->execute([':qte' => $newQte, ':idJoueur' => $idJoueur, ':idItem' => $idItem]);
+        }
+
+        // Add gold to player
+        $stmt = $pdo->prepare(
+            'UPDATE Joueurs SET gold = gold + :gold WHERE idJoueur = :idJoueur'
+        );
+        $stmt->execute([':gold' => $goldGagne, ':idJoueur' => $idJoueur]);
+
+        // Restore quantity back to shop stock
+        $stmt = $pdo->prepare(
+            'UPDATE Items SET quantite = quantite + :quantite WHERE idItem = :idItem'
+        );
+        $stmt->execute([':quantite' => $quantite, ':idItem' => $idItem]);
+
+        $pdo->commit();
+
+        return ['success' => true, 'gold' => $goldGagne];
+
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('VendreItem error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de la vente.'];
+    }
+}
+
+// -------------------------
 // Fetch Mage Status
 // -------------------------
 function GetMageStatus(int $idJoueur): array
