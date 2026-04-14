@@ -29,6 +29,11 @@ if ($currentPage === 'panier.php') {
     $navLinks = [
         'magasin.php' => 'Magasin',
     ];
+} elseif ($currentPage === 'profil.php') {
+    $navLinks = [
+        'magasin.php' => 'Magasin',
+        'inventaire.php' => 'Inventaire',
+    ];
 }
 ?>
 <header>
@@ -109,8 +114,13 @@ if ($currentPage === 'panier.php') {
                     <img class="user-avatar" src="img/placeholder.webp" alt="Avatar">
                 </a>
                 <?php if ($loggedIn): ?>
+                    <?php $cartCount = GetCartCount((int)$_SESSION['user_id']); ?>
                     <a class="cart-btn" href="panier.php">
                         🛒
+                        <?php if ($cartCount > 0): ?>
+                            <span class="user-profile-divider"></span>
+                            <span class="cart-count"><?= $cartCount ?></span>
+                        <?php endif; ?>
                     </a>
                 <?php endif; ?>
             <?php endif; ?>

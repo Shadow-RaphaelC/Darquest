@@ -173,7 +173,7 @@ require_once 'BD/bd.php';
                 if (details.description) rows += `<tr><td>Description</td><td>${details.description}</td></tr>`;
             } else if (details.category === 'potion') {
                 rows += `<tr><td>Effet</td><td>${details.effet}</td></tr>`;
-                rows += `<tr><td>Durée</td><td>${details.duree} tours</td></tr>`;
+                rows += `<tr><td>Durée</td><td>${details.duree} Secondes</td></tr>`;
             } else if (details.category === 'armure') {
                 rows += `<tr><td>Matière</td><td>${details.matiere}</td></tr>`;
                 rows += `<tr><td>Taille</td><td>${details.taille}</td></tr>`;

@@ -249,6 +249,24 @@ function AfficherPanier(int $idJoueur): array
 }
 
 // -------------------------
+// Cart item count
+// -------------------------
+function GetCartCount(int $idJoueur): int
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return 0;
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT COALESCE(SUM(quantitePanier), 0) FROM Panier WHERE idJoueur = :id'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        return (int) $stmt->fetchColumn();
+    } catch (PDOException $e) {
+        return 0;
+    }
+}
+
+// -------------------------
 // Retirer du Panier
 // -------------------------
 function RetirerPanier(int $idItem, int $idJoueur): bool
@@ -350,9 +368,13 @@ function AfficherInventaire(int $idJoueur): array
         return [];
     try {
         $stmt = $pdo->prepare(
-            'SELECT inv.idItem, inv.quantiteInvenatire, i.nom, i.prix, i.image, i.typeItem, i.rarete
+            'SELECT inv.idItem, inv.quantiteInvenatire, i.nom, i.prix, i.image, i.typeItem,
+                    s.rarete, arm.taille, arm.matiere, arme.efficacite, arme.genre
              FROM Inventaire inv
-             JOIN Items i ON i.idItem = inv.idItem
+             JOIN Items i       ON i.idItem   = inv.idItem
+             LEFT JOIN Sorts   s   ON s.idItem   = inv.idItem
+             LEFT JOIN Armures arm ON arm.idItem = inv.idItem
+             LEFT JOIN Armes   arme ON arme.idItem = inv.idItem
              WHERE inv.idJoueur = :idJoueur'
         );
         $stmt->execute([':idJoueur' => $idJoueur]);
@@ -403,9 +425,10 @@ function VendreItem(int $idJoueur, int $idItem, int $quantite): array
 
         // Verify inventory ownership and available quantity
         $stmt = $pdo->prepare(
-            'SELECT inv.quantiteInvenatire, i.prix, i.typeItem, i.rarete
+            'SELECT inv.quantiteInvenatire, i.prix, i.typeItem, s.rarete
              FROM Inventaire inv
              JOIN Items i ON i.idItem = inv.idItem
+             LEFT JOIN Sorts s ON s.idItem = inv.idItem
              WHERE inv.idJoueur = :idJoueur AND inv.idItem = :idItem'
         );
         $stmt->execute([':idJoueur' => $idJoueur, ':idItem' => $idItem]);
@@ -531,5 +554,379 @@ function GetMageStatus(int $idJoueur): array
     } catch (PDOException $e) {
         error_log('GetMageStatus error: ' . $e->getMessage());
         return ['estMage' => 0];
+    }
+}
+
+// -------------------------
+// Armor stat helper
+// -------------------------
+function getArmorStats(string $taille, string $matiere): array
+{
+    $tailleStats = [
+        'EXTRA LARGE' => ['maxHP' => 30, 'heal' => -5],
+        'LARGE'       => ['maxHP' => 20, 'heal' =>  0],
+        'MOYEN'       => ['maxHP' => 10, 'heal' =>  5],
+        'PETIT'       => ['maxHP' =>  5, 'heal' => 10],
+    ];
+    $matiereStats = [
+        'PLAQUES' => ['maxHP' => 20, 'heal' => -5],
+        'MAILLE'  => ['maxHP' => 15, 'heal' =>  0],
+        'CUIR'    => ['maxHP' => 10, 'heal' =>  5],
+        'TISSU'   => ['maxHP' =>  5, 'heal' => 10],
+    ];
+
+    $t = $tailleStats[strtoupper(trim($taille))]   ?? ['maxHP' => 0, 'heal' => 0];
+    $m = $matiereStats[strtoupper(trim($matiere))] ?? ['maxHP' => 0, 'heal' => 0];
+
+    return ['maxHP' => $t['maxHP'] + $m['maxHP'], 'heal' => $t['heal'] + $m['heal']];
+}
+
+// -------------------------
+// Get Equipped Armor
+// -------------------------
+function GetArmureEquipee(int $idJoueur): ?array
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return null;
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT i.idItem, i.nom, i.image, a.taille, a.matiere
+             FROM Joueurs j
+             JOIN Items   i ON i.idItem = j.idArmureEquipee
+             JOIN Armures a ON a.idItem = j.idArmureEquipee
+             WHERE j.idJoueur = :id AND j.idArmureEquipee IS NOT NULL
+             LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+        if (!$row) return null;
+        $stats = getArmorStats($row['taille'], $row['matiere']);
+        return array_merge($row, ['maxHPBonus' => $stats['maxHP'], 'healBonus' => $stats['heal']]);
+    } catch (PDOException $e) {
+        error_log('GetArmureEquipee error: ' . $e->getMessage());
+        return null;
+    }
+}
+
+// -------------------------
+// Equip Armor
+// -------------------------
+function EquiperArmure(int $idJoueur, int $idItem): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+
+    try {
+        $pdo->beginTransaction();
+
+        // Verify the armor exists in the player's inventory
+        $stmt = $pdo->prepare(
+            'SELECT a.taille, a.matiere
+             FROM Armures a
+             JOIN Inventaire inv ON inv.idItem = a.idItem
+             WHERE a.idItem = :idItem AND inv.idJoueur = :idJoueur'
+        );
+        $stmt->execute([':idItem' => $idItem, ':idJoueur' => $idJoueur]);
+        $newArmor = $stmt->fetch();
+
+        if (!$newArmor) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Armure introuvable dans l\'inventaire.'];
+        }
+
+        // Get current player state
+        $stmt = $pdo->prepare(
+            'SELECT maxHP, pointDeVie, idArmureEquipee FROM Joueurs WHERE idJoueur = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $player = $stmt->fetch();
+
+        if (!$player) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Joueur introuvable.'];
+        }
+
+        $maxHP      = (int) $player['maxHP'];
+        $pointDeVie = (int) $player['pointDeVie'];
+        $idOld      = $player['idArmureEquipee'];
+
+        // Already wearing this exact armor
+        if ($idOld !== null && (int) $idOld === $idItem) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Vous portez déjà cette armure.'];
+        }
+
+        // Strip old armor bonuses from maxHP
+        if ($idOld !== null) {
+            $stmt = $pdo->prepare('SELECT taille, matiere FROM Armures WHERE idItem = :id LIMIT 1');
+            $stmt->execute([':id' => $idOld]);
+            $oldArmor = $stmt->fetch();
+            if ($oldArmor) {
+                $oldStats = getArmorStats($oldArmor['taille'], $oldArmor['matiere']);
+                $maxHP   -= $oldStats['maxHP'];
+            }
+        }
+
+        // Apply new armor bonuses
+        $newStats = getArmorStats($newArmor['taille'], $newArmor['matiere']);
+        $newMaxHP = $maxHP + $newStats['maxHP'];
+        $newHeal  = $newStats['heal'];
+        $newPV    = min($pointDeVie, $newMaxHP);
+
+        $stmt = $pdo->prepare(
+            'UPDATE Joueurs
+             SET maxHP = :maxHP, pointDeVie = :pv, healBonus = :heal, idArmureEquipee = :idArmure
+             WHERE idJoueur = :idJoueur'
+        );
+        $stmt->execute([
+            ':maxHP'    => $newMaxHP,
+            ':pv'       => $newPV,
+            ':heal'     => $newHeal,
+            ':idArmure' => $idItem,
+            ':idJoueur' => $idJoueur,
+        ]);
+
+        $pdo->commit();
+
+        return ['success' => true, 'maxHP' => $newMaxHP, 'pointDeVie' => $newPV, 'healBonus' => $newHeal];
+
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('EquiperArmure error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de l\'équipement.'];
+    }
+}
+
+// -------------------------
+// Unequip Armor
+// -------------------------
+function DesequiperArmure(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare(
+            'SELECT maxHP, pointDeVie, idArmureEquipee FROM Joueurs WHERE idJoueur = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $player = $stmt->fetch();
+
+        if (!$player || $player['idArmureEquipee'] === null) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Aucune armure équipée.'];
+        }
+
+        $maxHP      = (int) $player['maxHP'];
+        $pointDeVie = (int) $player['pointDeVie'];
+        $idOld      = (int) $player['idArmureEquipee'];
+
+        $stmt = $pdo->prepare('SELECT taille, matiere FROM Armures WHERE idItem = :id LIMIT 1');
+        $stmt->execute([':id' => $idOld]);
+        $oldArmor = $stmt->fetch();
+
+        if ($oldArmor) {
+            $oldStats = getArmorStats($oldArmor['taille'], $oldArmor['matiere']);
+            $maxHP   -= $oldStats['maxHP'];
+        }
+
+        $newPV = min($pointDeVie, $maxHP);
+
+        $stmt = $pdo->prepare(
+            'UPDATE Joueurs SET maxHP = :maxHP, pointDeVie = :pv, healBonus = 0, idArmureEquipee = NULL
+             WHERE idJoueur = :idJoueur'
+        );
+        $stmt->execute([':maxHP' => $maxHP, ':pv' => $newPV, ':idJoueur' => $idJoueur]);
+
+        $pdo->commit();
+
+        return ['success' => true, 'maxHP' => $maxHP, 'pointDeVie' => $newPV];
+
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('DesequiperArmure error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors du déséquipement.'];
+    }
+}
+
+// -------------------------
+// Weapon stat helper
+// -------------------------
+function normalizeStatKey(string $s): string
+{
+    $s = strtoupper(trim($s));
+    $s = str_replace(['É','È','Ê','Ë'], 'E', $s);
+    $s = str_replace(['é','è','ê','ë'], 'E', $s);
+    $s = str_replace(['À','Â'], 'A', $s);
+    $s = str_replace(['à','â'], 'A', $s);
+    return $s;
+}
+
+function getWeaponStats(string $efficacite, string $genre): array
+{
+    $efficaciteBonus = [
+        'TRES TRES TRES EFFICACE' => 20,
+        'TRES TRES EFFICACE'      => 15,
+        'TRES EFFICACE'           => 10,
+        'EFFICACE'                => 5,
+        'PAS EFFICACE'            => 0,
+    ];
+
+    $genreStats = [
+        'EPEE A DEUX MAIN'  => ['gold' =>  10, 'damage' => 0.50],
+        'EPEE'              => ['gold' =>   0, 'damage' => 1.00],
+        'GLAIVE'            => ['gold' => -10, 'damage' => 2.00],
+        'BATON'             => ['gold' =>  10, 'damage' => 0.50],
+        'HACHE A DEUX MAIN' => ['gold' =>  10, 'damage' => 0.50],
+        'DAGUE'             => ['gold' =>   0, 'damage' => 1.00],
+        'ARC'               => ['gold' => -10, 'damage' => 2.00],
+        'HACHE'             => ['gold' =>   0, 'damage' => 1.00],
+    ];
+
+    $effKey   = normalizeStatKey($efficacite);
+    $genreKey = normalizeStatKey($genre);
+
+    $goldFromEff = $efficaciteBonus[$effKey]  ?? 0;
+    $genreData   = $genreStats[$genreKey]     ?? ['gold' => 0, 'damage' => 1.00];
+
+    return [
+        'goldBonus'      => $goldFromEff + $genreData['gold'],
+        'damageModifier' => $genreData['damage'],
+    ];
+}
+
+// -------------------------
+// Get Equipped Weapon
+// -------------------------
+function GetArmeEquipee(int $idJoueur): ?array
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return null;
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT i.idItem, i.nom, i.image, arme.efficacite, arme.genre
+             FROM Joueurs j
+             JOIN Items i   ON i.idItem   = j.idArmeEquipee
+             JOIN Armes arme ON arme.idItem = j.idArmeEquipee
+             WHERE j.idJoueur = :id AND j.idArmeEquipee IS NOT NULL
+             LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+        if (!$row) return null;
+        $stats = getWeaponStats($row['efficacite'], $row['genre']);
+        return array_merge($row, $stats);
+    } catch (PDOException $e) {
+        error_log('GetArmeEquipee error: ' . $e->getMessage());
+        return null;
+    }
+}
+
+// -------------------------
+// Equip Weapon
+// -------------------------
+function EquiperArme(int $idJoueur, int $idItem): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+
+    try {
+        $pdo->beginTransaction();
+
+        // Verify weapon exists in player's inventory
+        $stmt = $pdo->prepare(
+            'SELECT arme.efficacite, arme.genre
+             FROM Armes arme
+             JOIN Inventaire inv ON inv.idItem = arme.idItem
+             WHERE arme.idItem = :idItem AND inv.idJoueur = :idJoueur'
+        );
+        $stmt->execute([':idItem' => $idItem, ':idJoueur' => $idJoueur]);
+        $newWeapon = $stmt->fetch();
+
+        if (!$newWeapon) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Arme introuvable dans l\'inventaire.'];
+        }
+
+        // Get current player state
+        $stmt = $pdo->prepare(
+            'SELECT idArmeEquipee FROM Joueurs WHERE idJoueur = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $player = $stmt->fetch();
+
+        if (!$player) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Joueur introuvable.'];
+        }
+
+        $idOld = $player['idArmeEquipee'];
+
+        if ($idOld !== null && (int) $idOld === $idItem) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Vous portez déjà cette arme.'];
+        }
+
+        $newStats = getWeaponStats($newWeapon['efficacite'], $newWeapon['genre']);
+
+        $stmt = $pdo->prepare(
+            'UPDATE Joueurs
+             SET goldBonus = :gold, damageModifier = :dmg, idArmeEquipee = :idArme
+             WHERE idJoueur = :idJoueur'
+        );
+        $stmt->execute([
+            ':gold'     => $newStats['goldBonus'],
+            ':dmg'      => $newStats['damageModifier'],
+            ':idArme'   => $idItem,
+            ':idJoueur' => $idJoueur,
+        ]);
+
+        $pdo->commit();
+
+        return ['success' => true, 'goldBonus' => $newStats['goldBonus'], 'damageModifier' => $newStats['damageModifier']];
+
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('EquiperArme error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de l\'équipement.'];
+    }
+}
+
+// -------------------------
+// Unequip Weapon
+// -------------------------
+function DesequiperArme(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT idArmeEquipee FROM Joueurs WHERE idJoueur = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $player = $stmt->fetch();
+
+        if (!$player || $player['idArmeEquipee'] === null) {
+            return ['success' => false, 'message' => 'Aucune arme équipée.'];
+        }
+
+        $stmt = $pdo->prepare(
+            'UPDATE Joueurs SET goldBonus = 0, damageModifier = 1.00, idArmeEquipee = NULL
+             WHERE idJoueur = :idJoueur'
+        );
+        $stmt->execute([':idJoueur' => $idJoueur]);
+
+        return ['success' => true];
+
+    } catch (PDOException $e) {
+        error_log('DesequiperArme error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors du déséquipement.'];
     }
 }

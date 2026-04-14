@@ -215,6 +215,21 @@ main {
   background: rgba(255, 255, 255, 0.25);
 }
 
+.cart-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #c0392b;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  padding: 0 5px;
+  line-height: 1;
+}
+
 .user-avatar {
   width: 30px;
   height: 30px;
@@ -609,6 +624,161 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   border: 1px solid #f3adad;
 }
 
+/* >-- USE BUTTON --< */
+
+.btn-utiliser {
+  display: block;
+  width: 90vw;
+  max-width: 400px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #2b5f8f;
+  color: #ffffff;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  font-size: 1rem;
+  margin: 0 auto 8px;
+  box-sizing: border-box;
+  transition: background 0.2s ease;
+}
+
+.btn-utiliser:hover {
+  background: #4a90d9;
+}
+
+.btn-utiliser:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.35);
+  cursor: not-allowed;
+}
+
+.armor-badge-equipped {
+  display: inline-block;
+  background: #2b5f8f;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.armor-stats {
+  margin: 2px 0;
+  font-size: 0.92rem;
+  color: #aad4f5;
+}
+
+/* >-- PROFIL --< */
+
+.profil-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.profil-stat-box {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.profil-stat-box h2 {
+  margin: 0 0 14px 0;
+  font-size: 1.3rem;
+  color: #fff;
+}
+
+.profil-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 1rem;
+}
+
+.profil-stat-row:last-of-type {
+  border-bottom: none;
+}
+
+.profil-stat-label { color: #aaa; }
+.profil-stat-value { color: #fff; font-weight: 600; }
+
+.profil-hp-bar-wrap {
+  margin-top: 12px;
+  height: 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.profil-hp-bar {
+  height: 100%;
+  border-radius: 6px;
+  background: #adf3ad;
+  transition: width 0.4s ease;
+}
+
+.profil-armor-card {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.profil-armor-img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.profil-armor-info h3 {
+  margin: 0 0 6px 0;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.profil-armor-info p {
+  margin: 3px 0;
+  font-size: 0.92rem;
+  color: #aad4f5;
+}
+
+.btn-desequiper {
+  padding: 10px 22px;
+  border-radius: 8px;
+  background: #8f2b2b;
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+}
+
+.btn-desequiper:hover {
+  background: #f3adad;
+  color: #1a1a2e;
+}
+
+.profil-no-armor {
+  color: #888;
+  font-style: italic;
+  margin: 8px 0 12px;
+}
+
 .item-img {
   width: auto;
   height: auto;
@@ -662,7 +832,8 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
 
 .btnPanier {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   margin-top: 12px;
   padding-bottom: 16px;
   width: 100%;
