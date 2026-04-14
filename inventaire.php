@@ -113,9 +113,18 @@ if (isset($_SESSION['inv_flash'])) {
                         else
                             $typeLabel = 'Autre';
 
-                        $resellRate  = ($typeCode === 'S' || $typeCode === 'SORT') ? 1.10 : 0.60;
-                        $resellPrix  = (int) round($prix * $resellRate);
-                        $resellColor = ($typeCode === 'S' || $typeCode === 'SORT') ? '#adf3ad' : '#f3c9ad';
+                        if ($typeCode === 'S' || $typeCode === 'SORT') {
+                            $rarete = (int) $item['rarete'];
+                            if ($rarete === 2)      { $resellRate = 0.95; $resellLabel = '(-5%)'; }
+                            elseif ($rarete === 3)  { $resellRate = 0.90; $resellLabel = '(-10%)'; }
+                            else                    { $resellRate = 1.00; $resellLabel = '(100%)'; }
+                            $resellColor = '#adf3ad';
+                        } else {
+                            $resellRate  = 0.60;
+                            $resellLabel = '(-40%)';
+                            $resellColor = '#f3c9ad';
+                        }
+                        $resellPrix = (int) round($prix * $resellRate);
                         ?>
                         <div class="itemBox">
                             <div class="item-img-wrapper">
@@ -128,7 +137,7 @@ if (isset($_SESSION['inv_flash'])) {
                                 <p class="prixOr"><?= number_format($prix, 0, '', '') ?> gold</p>
                                 <p class="item-resell" style="color: <?= $resellColor ?>;">
                                     Revente : <?= number_format($resellPrix, 0, '', '') ?> gold / unité
-                                    <?= ($typeCode === 'S' || $typeCode === 'SORT') ? '(+10%)' : '(-40%)' ?>
+                                    <?= $resellLabel ?>
                                 </p>
                             </div>
                             <div class="btnPanier">

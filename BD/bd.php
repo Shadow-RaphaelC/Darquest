@@ -350,7 +350,7 @@ function AfficherInventaire(int $idJoueur): array
         return [];
     try {
         $stmt = $pdo->prepare(
-            'SELECT inv.idItem, inv.quantiteInvenatire, i.nom, i.prix, i.image, i.typeItem
+            'SELECT inv.idItem, inv.quantiteInvenatire, i.nom, i.prix, i.image, i.typeItem, i.rarete
              FROM Inventaire inv
              JOIN Items i ON i.idItem = inv.idItem
              WHERE inv.idJoueur = :idJoueur'
@@ -403,7 +403,7 @@ function VendreItem(int $idJoueur, int $idItem, int $quantite): array
 
         // Verify inventory ownership and available quantity
         $stmt = $pdo->prepare(
-            'SELECT inv.quantiteInvenatire, i.prix, i.typeItem
+            'SELECT inv.quantiteInvenatire, i.prix, i.typeItem, i.rarete
              FROM Inventaire inv
              JOIN Items i ON i.idItem = inv.idItem
              WHERE inv.idJoueur = :idJoueur AND inv.idItem = :idItem'
@@ -422,10 +422,17 @@ function VendreItem(int $idJoueur, int $idItem, int $quantite): array
             return ['success' => false, 'message' => 'Quantité insuffisante dans l\'inventaire.'];
         }
 
-        // Calculate resell price (spells: +10%, others: -40%)
+        // Calculate resell price (sorts: rate by rarete; others: -40%)
         $prix     = (int) $row['prix'];
         $typeCode = strtoupper(trim((string) $row['typeItem']));
-        $resellRate = ($typeCode === 'S' || $typeCode === 'SORT') ? 1.10 : 0.60;
+        if ($typeCode === 'S' || $typeCode === 'SORT') {
+            $rarete = (int) $row['rarete'];
+            if ($rarete === 2)      $resellRate = 0.95;
+            elseif ($rarete === 3)  $resellRate = 0.90;
+            else                    $resellRate = 1.00;
+        } else {
+            $resellRate = 0.60;
+        }
         $goldGagne  = (int) round($prix * $resellRate * $quantite);
 
         // Remove from inventory (delete row if quantity reaches 0)
