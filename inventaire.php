@@ -79,6 +79,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'use')
     } elseif ($typeCode === 'A' || $typeCode === 'ARME') {
         $result = EquiperArme($userId, $idItem);
         echo json_encode(array_merge($result, ['itemType' => 'arme']));
+    } elseif ($typeCode === 'P' || $typeCode === 'POTION') {
+        $result = UtiliserPotion($userId, $idItem);
+        if ($result['success']) {
+            $_SESSION['pointDeVie'] = $result['newPV'];
+            $_SESSION['maxHP']      = $result['maxHP'];
+        }
+        echo json_encode(array_merge($result, [
+            'itemType' => 'potion',
+            'newMaxHP' => (int)($_SESSION['maxHP']      ?? 100),
+            'newPV'    => (int)($_SESSION['pointDeVie'] ?? 0),
+        ]));
     } else {
         echo json_encode(['success' => false, 'message' => 'Cet item n\'est pas encore utilisable.']);
     }
@@ -128,6 +139,19 @@ if (isset($_SESSION['inv_flash'])) {
             $equippedArmorId  = $armureEquipee ? (int) $armureEquipee['idItem'] : null;
             $armeEquipee      = GetArmeEquipee($userId);
             $equippedWeaponId = $armeEquipee   ? (int) $armeEquipee['idItem']   : null;
+            $playerHP         = GetJoueurHP($userId);
+            $playerMaxHP      = $playerHP['maxHP'];
+            $playerHealBonus  = 0;
+            $playerPV         = $playerHP['pointDeVie'];
+            $pdoTmp = get_pdo();
+            if ($pdoTmp) {
+                try {
+                    $sTmp = $pdoTmp->prepare('SELECT healBonus FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+                    $sTmp->execute([':id' => $userId]);
+                    $rTmp = $sTmp->fetch();
+                    $playerHealBonus = (int)($rTmp['healBonus'] ?? 0);
+                } catch (PDOException $e) {}
+            }
             ?>
 
             <?php if (empty($items)): ?>
@@ -202,6 +226,12 @@ if (isset($_SESSION['inv_flash'])) {
                         if (($typeCode === 'A' || $typeCode === 'ARME') && !empty($item['efficacite']) && !empty($item['genre'])) {
                             $weaponStats = getWeaponStats($item['efficacite'], $item['genre']);
                         }
+
+                        // Potion sub-stats
+                        $potionHealPct = null;
+                        if (($typeCode === 'P' || $typeCode === 'POTION') && !empty($item['effet'])) {
+                            $potionHealPct = getPotionHealPct($item['effet']);
+                        }
                         ?>
                         <div class="itemBox" id="item-<?= $idItem ?>"
                              data-type="<?= htmlspecialchars($typeLabel, ENT_QUOTES) ?>"
@@ -240,10 +270,28 @@ if (isset($_SESSION['inv_flash'])) {
                                         &nbsp;|&nbsp;
                                         <?php
                                         $dmg = (float) $weaponStats['damageModifier'];
-                                        if ($dmg < 1.0)      echo 'Dégâts /2';
-                                        elseif ($dmg > 1.0)  echo 'Dégâts ×2';
-                                        else                 echo 'Dégâts normaux';
+                                        if ($dmg < 1.0)      echo 'Dégâts Prit /2';
+                                        elseif ($dmg > 1.0)  echo 'Dégâts Prit ×2';
+                                        else                 echo 'Dégâts Prit normaux';
                                         ?>
+                                    </p>
+                                <?php endif; ?>
+                                <?php if ($potionHealPct !== null): ?>
+                                    <?php
+                                    $baseHeal  = (int) round($playerMaxHP * $potionHealPct / 100);
+                                    $realHeal  = (int) round($baseHeal * (1 + $playerHealBonus / 100));
+                                    $realHeal  = max(1, $realHeal);
+                                    ?>
+                                    <p class="armor-stats">
+                                        <?= htmlspecialchars(ucfirst(strtolower($item['effet']))) ?>
+                                    </p>
+                                    <p class="armor-stats">
+                                        Restaure ~<?= $realHeal ?> HP
+                                        <?php if ($playerHealBonus !== 0): ?>
+                                            <span style="color:<?= $playerHealBonus > 0 ? '#adf3ad' : '#f3adad' ?>;">
+                                                (<?= $playerHealBonus > 0 ? '+' : '' ?><?= $playerHealBonus ?>% soin)
+                                            </span>
+                                        <?php endif; ?>
                                     </p>
                                 <?php endif; ?>
                                 <p class="description">Quantité : <?= $qte ?></p>
@@ -317,7 +365,7 @@ if (isset($_SESSION['inv_flash'])) {
                             const goldEl = document.querySelector('.coins .gold');
                             if (goldEl) goldEl.textContent = parseInt(data.newGold, 10);
                             showFlash('Vendu ! +' + data.gold + ' gold', 'success');
-                            setTimeout(function () { location.reload(); }, 1400);
+                            setTimeout(function () { saveFilterState(); location.reload(); }, 1400);
                         } else {
                             showFlash(data.message || 'Erreur inconnue', 'error');
                         }
@@ -342,19 +390,28 @@ if (isset($_SESSION['inv_flash'])) {
                     .then(function (res) { return res.json(); })
                     .then(function (data) {
                         if (data.success) {
+                            const hpBar  = document.querySelector('.hpBar');
+                            const hpText = document.querySelector('.hpText');
                             if (data.itemType === 'armure') {
-                                const hpBar = document.querySelector('.hpBar');
-                                const hpText = document.querySelector('.hpText');
                                 if (hpBar && hpText && data.newMaxHP > 0) {
                                     const pct = Math.round(data.newPV / data.newMaxHP * 100);
                                     hpBar.style.width = pct + '%';
                                     hpText.textContent = 'PV: ' + data.newPV + '/' + data.newMaxHP;
                                 }
                                 showFlash('Armure équipée !', 'success');
+                            } else if (data.itemType === 'arme') {
+                                showFlash('Arme équipée !', 'success');
+                            } else if (data.itemType === 'potion') {
+                                if (hpBar && hpText && data.newMaxHP > 0) {
+                                    const pct = Math.round(data.newPV / data.newMaxHP * 100);
+                                    hpBar.style.width = pct + '%';
+                                    hpText.textContent = 'PV: ' + data.newPV + '/' + data.newMaxHP;
+                                }
+                                showFlash('+' + data.healed + ' HP restaurés !', 'success');
                             } else {
                                 showFlash('Utilisé !', 'success');
                             }
-                            setTimeout(function () { location.reload(); }, 1400);
+                            setTimeout(function () { saveFilterState(); location.reload(); }, 1400);
                         } else {
                             btn.disabled = false;
                             showFlash(data.message || 'Erreur inconnue', 'error');
@@ -366,6 +423,36 @@ if (isset($_SESSION['inv_flash'])) {
                     });
             });
         });
+
+        // Filter state persistence
+        function saveFilterState() {
+            const state = {
+                search: document.getElementById('searchInput')?.value ?? '',
+                types:  [...document.querySelectorAll('input[name="type"]:checked')].map(cb => cb.value),
+                sort:   document.querySelector('input[name="sort"]:checked')?.value ?? 'no_sort',
+            };
+            sessionStorage.setItem('inv_filters', JSON.stringify(state));
+        }
+
+        function restoreFilterState() {
+            const raw = sessionStorage.getItem('inv_filters');
+            if (!raw) return;
+            sessionStorage.removeItem('inv_filters');
+            try {
+                const state = JSON.parse(raw);
+                const searchEl = document.getElementById('searchInput');
+                if (searchEl && state.search) searchEl.value = state.search;
+                (state.types || []).forEach(function (val) {
+                    const cb = document.querySelector('input[name="type"][value="' + val + '"]');
+                    if (cb) cb.checked = true;
+                });
+                if (state.sort) {
+                    const radio = document.querySelector('input[name="sort"][value="' + state.sort + '"]');
+                    if (radio) radio.checked = true;
+                }
+                applyFilters();
+            } catch (e) {}
+        }
 
         // Search & filter
         function applyFilters() {
@@ -399,6 +486,8 @@ if (isset($_SESSION['inv_flash'])) {
 
         const searchInput = document.getElementById('searchInput');
         if (searchInput) searchInput.addEventListener('input', applyFilters);
+
+        restoreFilterState();
 
         function showFlash(msg, type) {
             let el = document.getElementById('inv-flash-msg');

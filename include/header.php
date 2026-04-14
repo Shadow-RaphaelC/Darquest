@@ -1,4 +1,5 @@
 <?php
+checkPotionRestock();
 $currentPage = basename($_SERVER['SCRIPT_NAME']);
 $loggedIn = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
 $userName = $loggedIn ? ($_SESSION['username'] ?? 'Joueur') : 'Invité';

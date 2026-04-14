@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                         </span>
                     </div>
                     <div class="profil-stat-row">
-                        <span class="profil-stat-label">Modificateur de dégâts</span>
+                        <span class="profil-stat-label">Modificateur de dégâts reçus</span>
                         <span class="profil-stat-value" style="color:<?= $damageModifier < 1.0 ? '#adf3ad' : ($damageModifier > 1.0 ? '#f3adad' : '#fff') ?>;">
                             <?php
                             if ($damageModifier < 1.0)     echo 'Dégâts /2';

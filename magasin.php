@@ -193,11 +193,30 @@ require_once 'BD/bd.php';
         }
         ?>
 
+        // ---- CART BADGE ----
+        function incrementCartBadge() {
+            const cartBtn = document.querySelector('.cart-btn');
+            if (!cartBtn) return;
+            let countEl = cartBtn.querySelector('.cart-count');
+            if (countEl) {
+                countEl.textContent = parseInt(countEl.textContent, 10) + 1;
+            } else {
+                const divider = document.createElement('span');
+                divider.className = 'user-profile-divider';
+                const badge = document.createElement('span');
+                badge.className = 'cart-count';
+                badge.textContent = '1';
+                cartBtn.appendChild(divider);
+                cartBtn.appendChild(badge);
+            }
+        }
+
         // ---- CART FEEDBACK HELPER ----
         function attachCartFeedback(form) {
             form.addEventListener('submit', function (e) {
                 if (!isLoggedIn) return;
-                
+                incrementCartBadge();
+
                 const btn = this.querySelector('.btnPanierImg-btn');
                 const img = this.querySelector('.btnPanierImg');
 

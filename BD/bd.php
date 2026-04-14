@@ -369,12 +369,13 @@ function AfficherInventaire(int $idJoueur): array
     try {
         $stmt = $pdo->prepare(
             'SELECT inv.idItem, inv.quantiteInvenatire, i.nom, i.prix, i.image, i.typeItem,
-                    s.rarete, arm.taille, arm.matiere, arme.efficacite, arme.genre
+                    s.rarete, arm.taille, arm.matiere, arme.efficacite, arme.genre, pot.effet
              FROM Inventaire inv
-             JOIN Items i       ON i.idItem   = inv.idItem
-             LEFT JOIN Sorts   s   ON s.idItem   = inv.idItem
-             LEFT JOIN Armures arm ON arm.idItem = inv.idItem
+             JOIN Items i          ON i.idItem    = inv.idItem
+             LEFT JOIN Sorts   s   ON s.idItem    = inv.idItem
+             LEFT JOIN Armures arm ON arm.idItem  = inv.idItem
              LEFT JOIN Armes   arme ON arme.idItem = inv.idItem
+             LEFT JOIN Potions pot ON pot.idItem  = inv.idItem
              WHERE inv.idJoueur = :idJoueur'
         );
         $stmt->execute([':idJoueur' => $idJoueur]);
@@ -777,13 +778,13 @@ function getWeaponStats(string $efficacite, string $genre): array
     ];
 
     $genreStats = [
-        'EPEE A DEUX MAIN'  => ['gold' =>  10, 'damage' => 0.50],
+        'EPEE A DEUX MAIN'  => ['gold' => -10, 'damage' => 0.50],
         'EPEE'              => ['gold' =>   0, 'damage' => 1.00],
-        'GLAIVE'            => ['gold' => -10, 'damage' => 2.00],
-        'BATON'             => ['gold' =>  10, 'damage' => 0.50],
-        'HACHE A DEUX MAIN' => ['gold' =>  10, 'damage' => 0.50],
+        'GLAIVE'            => ['gold' =>  10, 'damage' => 2.00],
+        'BATON'             => ['gold' => -10, 'damage' => 0.50],
+        'HACHE A DEUX MAIN' => ['gold' => -10, 'damage' => 0.50],
         'DAGUE'             => ['gold' =>   0, 'damage' => 1.00],
-        'ARC'               => ['gold' => -10, 'damage' => 2.00],
+        'ARC'               => ['gold' =>  10, 'damage' => 2.00],
         'HACHE'             => ['gold' =>   0, 'damage' => 1.00],
     ];
 
@@ -928,5 +929,145 @@ function DesequiperArme(int $idJoueur): array
     } catch (PDOException $e) {
         error_log('DesequiperArme error: ' . $e->getMessage());
         return ['success' => false, 'message' => 'Erreur lors du déséquipement.'];
+    }
+}
+
+// -------------------------
+// Potion heal % by effet
+// -------------------------
+function getPotionHealPct(string $effet): int
+{
+    $map = [
+        'SOINS'                                      => 20,
+        'SOINS AMELIORE'                             => 40,
+        'RESISTANCE AU FEU'                          => 25,
+        'ATTAQUE PLUS FORTE'                         => 20,
+        'RAGE AMELIORE'                              => 25,
+        'RECUPERATION DE MANA'                       => 15,
+        'RECUPERATION DE MANA AMELIORE'              => 30,
+        'RECUPERATION DE MANA AMELIORE EN COMBAT'    => 35,
+        'VITESSE'                                    => 10,
+        'INVISIBILITE'                               => 15,
+    ];
+    return $map[normalizeStatKey($effet)] ?? 15;
+}
+
+// -------------------------
+// Use Potion
+// -------------------------
+function UtiliserPotion(int $idJoueur, int $idItem): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+
+    try {
+        $pdo->beginTransaction();
+
+        // Get potion effet + inventory qty
+        $stmt = $pdo->prepare(
+            'SELECT p.effet, inv.quantiteInvenatire
+             FROM Potions p
+             JOIN Inventaire inv ON inv.idItem = p.idItem
+             WHERE p.idItem = :idItem AND inv.idJoueur = :idJoueur'
+        );
+        $stmt->execute([':idItem' => $idItem, ':idJoueur' => $idJoueur]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Potion introuvable dans l\'inventaire.'];
+        }
+
+        // Get player HP + healBonus
+        $stmt = $pdo->prepare(
+            'SELECT pointDeVie, maxHP, healBonus FROM Joueurs WHERE idJoueur = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $player = $stmt->fetch();
+
+        if (!$player) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Joueur introuvable.'];
+        }
+
+        $pv        = (int)   $player['pointDeVie'];
+        $maxHP     = (int)   $player['maxHP'];
+        $healBonus = (int)   $player['healBonus'];
+
+        if ($pv >= $maxHP) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Vos HP sont déjà au maximum.'];
+        }
+
+        // Calculate heal
+        $healPct    = getPotionHealPct((string) $row['effet']);
+        $baseHeal   = (int) round($maxHP * $healPct / 100);
+        $finalHeal  = (int) round($baseHeal * (1 + $healBonus / 100));
+        $finalHeal  = max(1, $finalHeal);
+        $newPV      = min($pv + $finalHeal, $maxHP);
+
+        // Update HP
+        $stmt = $pdo->prepare('UPDATE Joueurs SET pointDeVie = :pv WHERE idJoueur = :id');
+        $stmt->execute([':pv' => $newPV, ':id' => $idJoueur]);
+
+        // Consume one potion
+        $newQte = (int) $row['quantiteInvenatire'] - 1;
+        if ($newQte <= 0) {
+            $stmt = $pdo->prepare('DELETE FROM Inventaire WHERE idJoueur = :idJoueur AND idItem = :idItem');
+            $stmt->execute([':idJoueur' => $idJoueur, ':idItem' => $idItem]);
+        } else {
+            $stmt = $pdo->prepare('UPDATE Inventaire SET quantiteInvenatire = :qte WHERE idJoueur = :idJoueur AND idItem = :idItem');
+            $stmt->execute([':qte' => $newQte, ':idJoueur' => $idJoueur, ':idItem' => $idItem]);
+        }
+
+        $pdo->commit();
+
+        return [
+            'success'   => true,
+            'healed'    => $finalHeal,
+            'newPV'     => $newPV,
+            'maxHP'     => $maxHP,
+            'consumed'  => $newQte <= 0,
+        ];
+
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('UtiliserPotion error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de l\'utilisation.'];
+    }
+}
+
+// -------------------------
+// Hourly potion restock (lazy cron)
+// -------------------------
+function checkPotionRestock(): void
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return;
+
+    try {
+        // Atomically claim the restock slot — only fires if 1+ hour has passed
+        $stmt = $pdo->prepare(
+            "UPDATE Config SET valeur = NOW()
+             WHERE cle = 'last_potion_restock'
+             AND valeur <= DATE_SUB(NOW(), INTERVAL 6 HOUR)"
+        );
+        $stmt->execute();
+
+        if ($stmt->rowCount() === 0) return; // Not time yet, or another request beat us
+
+        // Distribute 50 units randomly across potions
+        $restock = $pdo->prepare(
+            "UPDATE Items SET quantite = quantite + 1
+             WHERE typeItem IN ('P', 'POTION')
+             ORDER BY RAND() LIMIT 1"
+        );
+        for ($i = 0; $i < 50; $i++) {
+            $restock->execute();
+        }
+
+    } catch (PDOException $e) {
+        error_log('checkPotionRestock error: ' . $e->getMessage());
     }
 }
