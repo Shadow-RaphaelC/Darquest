@@ -474,6 +474,46 @@ function VendreItem(int $idJoueur, int $idItem, int $quantite): array
             $stmt->execute([':qte' => $newQte, ':idJoueur' => $idJoueur, ':idItem' => $idItem]);
         }
 
+        // Auto-unequip if this item is currently equipped
+        if ($typeCode === 'R' || $typeCode === 'ARMURE') {
+            $stmt = $pdo->prepare(
+                'SELECT maxHP, pointDeVie, idArmureEquipee FROM Joueurs
+                 WHERE idJoueur = :idJoueur AND idArmureEquipee = :idItem LIMIT 1'
+            );
+            $stmt->execute([':idJoueur' => $idJoueur, ':idItem' => $idItem]);
+            $equipped = $stmt->fetch();
+            if ($equipped) {
+                $newMaxHP = (int) $equipped['maxHP'];
+                $newPV    = (int) $equipped['pointDeVie'];
+                $armorStmt = $pdo->prepare('SELECT taille, matiere FROM Armures WHERE idItem = :id LIMIT 1');
+                $armorStmt->execute([':id' => $idItem]);
+                $armorRow = $armorStmt->fetch();
+                if ($armorRow) {
+                    $oldStats  = getArmorStats($armorRow['taille'], $armorRow['matiere']);
+                    $newMaxHP -= $oldStats['maxHP'];
+                }
+                $newPV = min($newPV, $newMaxHP);
+                $stmt = $pdo->prepare(
+                    'UPDATE Joueurs SET maxHP = :maxHP, pointDeVie = :pv, healBonus = 0, idArmureEquipee = NULL
+                     WHERE idJoueur = :idJoueur'
+                );
+                $stmt->execute([':maxHP' => $newMaxHP, ':pv' => $newPV, ':idJoueur' => $idJoueur]);
+            }
+        } elseif ($typeCode === 'A' || $typeCode === 'ARME') {
+            $stmt = $pdo->prepare(
+                'SELECT idArmeEquipee FROM Joueurs
+                 WHERE idJoueur = :idJoueur AND idArmeEquipee = :idItem LIMIT 1'
+            );
+            $stmt->execute([':idJoueur' => $idJoueur, ':idItem' => $idItem]);
+            if ($stmt->fetch()) {
+                $stmt = $pdo->prepare(
+                    'UPDATE Joueurs SET goldBonus = 0, damageModifier = 1.00, idArmeEquipee = NULL
+                     WHERE idJoueur = :idJoueur'
+                );
+                $stmt->execute([':idJoueur' => $idJoueur]);
+            }
+        }
+
         // Add gold to player
         $stmt = $pdo->prepare(
             'UPDATE Joueurs SET gold = gold + :gold WHERE idJoueur = :idJoueur'
@@ -1069,5 +1109,61 @@ function checkPotionRestock(): void
 
     } catch (PDOException $e) {
         error_log('checkPotionRestock error: ' . $e->getMessage());
+    }
+}
+
+// -------------------------
+// Ajouter Enigme (admin)
+// -------------------------
+function AjouterEnigme(string $enigme, string $difficulte, string $idCategorie, array $reponses, int $bonneReponse): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+
+    try {
+        // Insert the enigma via SP — expected to return a result set with the new idEnigma
+        $stmt = $pdo->prepare('CALL AjouterEnigma(:enigme, :difficulte, :idCategorie)');
+        $stmt->execute([
+            ':enigme'      => trim($enigme),
+            ':difficulte'  => $difficulte,
+            ':idCategorie' => $idCategorie,
+        ]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        while ($stmt->nextRowset()) {}
+
+        // SP uses START TRANSACTION without COMMIT — commit it from PHP
+        $pdo->commit();
+
+        // Try result set first, then LAST_INSERT_ID() on same connection
+        $idEnigma = $row ? (int) reset($row) : 0;
+        if (!$idEnigma) {
+            $idEnigma = (int) $pdo->query('SELECT LAST_INSERT_ID()')->fetchColumn();
+        }
+
+        if (!$idEnigma) {
+            return ['success' => false, 'message' => 'Impossible de récupérer l\'ID de l\'énigme créée.'];
+        }
+
+        // Insert each of the 4 responses via SP
+        // Fresh connection per call + explicit commit — SP opens transaction but never commits
+        foreach ($reponses as $i => $texte) {
+            $pdoRep = get_pdo();
+            if ($pdoRep === false) {
+                throw new \RuntimeException('Erreur de connexion BD pour les réponses.');
+            }
+            $estBonne      = ($i == $bonneReponse) ? 1 : 0;
+            $reponseQuoted = $pdoRep->quote(trim($texte));
+            $pdoRep->exec("CALL AjouterReponse($estBonne, $reponseQuoted, $idEnigma)");
+            $pdoRep->commit();
+            $pdoRep = null;
+        }
+
+        return ['success' => true, 'idEnigma' => $idEnigma];
+
+    } catch (PDOException $e) {
+        error_log('AjouterEnigme error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de l\'ajout de l\'énigme.'];
     }
 }

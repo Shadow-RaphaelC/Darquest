@@ -573,6 +573,36 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   color: #ccc;
 }
 
+.admin-type-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.admin-toggle-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.admin-toggle-btn.active {
+  background: rgba(212, 175, 111, 0.15);
+  border-color: #d4af6f;
+  color: #d4af6f;
+}
+
+.admin-toggle-btn:not(.active):hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
 .admin-responses-hint {
   font-size: 0.78rem;
   color: #888;
