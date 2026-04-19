@@ -1145,7 +1145,6 @@ function AjouterEnigme(string $enigme, string $difficulte, string $idCategorie, 
         if (!$idEnigma) {
             return ['success' => false, 'message' => 'Impossible de récupérer l\'ID de l\'énigme créée.'];
         }
-
         // Insert each of the 4 responses via SP
         // Fresh connection per call + explicit commit — SP opens transaction but never commits
         foreach ($reponses as $i => $texte) {
@@ -1165,5 +1164,232 @@ function AjouterEnigme(string $enigme, string $difficulte, string $idCategorie, 
     } catch (PDOException $e) {
         error_log('AjouterEnigme error: ' . $e->getMessage());
         return ['success' => false, 'message' => 'Erreur lors de l\'ajout de l\'énigme.'];
+    }
+}
+
+// -------------------------
+// Get Random Enigma with Answers
+// -------------------------
+function GetEnigmeAleatoire(string $categorie = ''): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return [];
+
+    try {
+        if ($categorie !== '' && in_array($categorie, ['F', 'M', 'D'], true)) {
+            $stmt = $pdo->prepare('CALL EnigmeParCategorie(:cat)');
+            $stmt->execute([':cat' => $categorie]);
+        } else {
+            $stmt = $pdo->query('CALL EnigmeAleatoire()');
+        }
+
+        $row = $stmt->fetch();
+        while ($stmt->nextRowset()) {}
+        try { $pdo->commit(); } catch (\Throwable $e) {}
+        if (!$row) return [];
+
+        $idEnigma = (int)$row['idEnigma'];
+
+        $pdo2 = get_pdo();
+        if ($pdo2 === false) return [];
+        $stmt2 = $pdo2->prepare(
+            'SELECT idReponses, reponse, estBonneReponse FROM Reponses WHERE idEnigma = :id'
+        );
+        $stmt2->execute([':id' => $idEnigma]);
+        $reponses = $stmt2->fetchAll();
+
+        if (empty($reponses)) return [];
+
+        return [
+            'idEnigma'    => $idEnigma,
+            'enigme'      => $row['enigme'],
+            'difficulte'  => $row['difficulte'] ?? $row['idCategorie'],
+            'idCategorie' => $row['idCategorie'],
+            'reponses'    => array_map(fn($r) => [
+                'idReponse' => (int)$r['idReponses'],
+                'reponse'   => $r['reponse'],
+                'estBonne'  => (bool)$r['estBonneReponse'],
+            ], $reponses),
+        ];
+    } catch (PDOException $e) {
+        error_log('GetEnigmeAleatoire error: ' . $e->getMessage());
+        return ['__error' => $e->getMessage()];
+    }
+}
+
+// -------------------------
+// Mage Progress (category G correct answers)
+// -------------------------
+function ProcessMageProgress(int $idJoueur): bool
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return false;
+    try {
+        $stmt = $pdo->prepare('SELECT mageCount, estMage FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+
+        if ((int)$row['estMage']) return false;
+
+        $newCount = (int)$row['mageCount'] + 1;
+        $pdo->prepare('UPDATE Joueurs SET mageCount = :c WHERE idJoueur = :id')
+            ->execute([':c' => $newCount, ':id' => $idJoueur]);
+
+        if ($newCount >= 3) {
+            $pdo->prepare('UPDATE Joueurs SET estMage = 1 WHERE idJoueur = :id')
+                ->execute([':id' => $idJoueur]);
+            return true;
+        }
+
+        return false;
+    } catch (PDOException $e) {
+        error_log('ProcessMageProgress error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+// -------------------------
+// Flag Enigma as Seen (estPigee)
+// -------------------------
+function FlagEnigmePigee(int $idEnigma, string $idCategorie): void
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return;
+    try {
+        $pdo->prepare('UPDATE Enigma SET estPigee = 1 WHERE idEnigma = :id')
+            ->execute([':id' => $idEnigma]);
+
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM Enigma WHERE idCategorie = :cat AND estPigee = 0');
+        $stmt->execute([':cat' => $idCategorie]);
+
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->prepare('UPDATE Enigma SET estPigee = 0 WHERE idCategorie = :cat')
+                ->execute([':cat' => $idCategorie]);
+        }
+    } catch (PDOException $e) {
+        error_log('FlagEnigmePigee error: ' . $e->getMessage());
+    }
+}
+
+// -------------------------
+// Joueur Streak
+// -------------------------
+function GetJoueurStreak(int $idJoueur): int
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return 0;
+    try {
+        $stmt = $pdo->prepare('SELECT streak FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt->execute([':id' => $idJoueur]);
+        return (int) $stmt->fetchColumn();
+    } catch (PDOException $e) {
+        error_log('GetJoueurStreak error: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+function SetJoueurStreak(int $idJoueur, int $streak): bool
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return false;
+    try {
+        $stmt = $pdo->prepare('UPDATE Joueurs SET streak = :streak WHERE idJoueur = :id');
+        $stmt->execute([':streak' => max(0, $streak), ':id' => $idJoueur]);
+        return true;
+    } catch (PDOException $e) {
+        error_log('SetJoueurStreak error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+// -------------------------
+// Joueur Damage Modifier (weapon)
+// -------------------------
+function GetJoueurDamageModifier(int $idJoueur): float
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return 1.0;
+    try {
+        $stmt = $pdo->prepare('SELECT damageModifier FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt->execute([':id' => $idJoueur]);
+        $val = $stmt->fetchColumn();
+        return $val !== false ? (float)$val : 1.0;
+    } catch (PDOException $e) {
+        error_log('GetJoueurDamageModifier error: ' . $e->getMessage());
+        return 1.0;
+    }
+}
+
+// -------------------------
+// Apply Enigma Damage (wrong answer)
+// -------------------------
+function PrendreDegatEnigme(int $idJoueur, int $degats): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return ['newHP' => 0, 'maxHP' => 100];
+    try {
+        $pdo->prepare(
+            'UPDATE Joueurs SET pointDeVie = GREATEST(0, pointDeVie - :d) WHERE idJoueur = :id'
+        )->execute([':d' => $degats, ':id' => $idJoueur]);
+        $stmt = $pdo->prepare('SELECT pointDeVie, maxHP FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+        return ['newHP' => (int)($row['pointDeVie'] ?? 0), 'maxHP' => (int)($row['maxHP'] ?? 100)];
+    } catch (PDOException $e) {
+        error_log('PrendreDegatEnigme error: ' . $e->getMessage());
+        return ['newHP' => 0, 'maxHP' => 100];
+    }
+}
+
+// -------------------------
+// Joueur Gold Bonus (weapon %)
+// -------------------------
+function GetJoueurGoldBonus(int $idJoueur): int
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return 0;
+    try {
+        $stmt = $pdo->prepare('SELECT goldBonus FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt->execute([':id' => $idJoueur]);
+        return (int) $stmt->fetchColumn();
+    } catch (PDOException $e) {
+        error_log('GetJoueurGoldBonus error: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+// -------------------------
+// Ajouter Pieces via SP (base reward)
+// -------------------------
+function AjouterPieces(string $difficulte, string $alias): bool
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return false;
+    try {
+        $stmt = $pdo->prepare('CALL AjouterPieces(:diff, :alias)');
+        $stmt->execute([':diff' => $difficulte, ':alias' => $alias]);
+        while ($stmt->nextRowset()) {}
+        return true;
+    } catch (PDOException $e) {
+        error_log('AjouterPieces error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+// -------------------------
+// Ajouter Pieces Bonus (streak reward, direct)
+// -------------------------
+function AjouterPiecesBonus(int $idJoueur, int $montant, string $type): bool
+{
+    if (!in_array($type, ['gold', 'argent', 'bronze'], true)) return false;
+    $pdo = get_pdo();
+    if ($pdo === false) return false;
+    try {
+        $stmt = $pdo->prepare("UPDATE Joueurs SET `$type` = `$type` + :montant WHERE idJoueur = :id");
+        $stmt->execute([':montant' => $montant, ':id' => $idJoueur]);
+        return true;
+    } catch (PDOException $e) {
+        error_log('AjouterPiecesBonus error: ' . $e->getMessage());
+        return false;
     }
 }

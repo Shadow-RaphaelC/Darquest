@@ -1590,14 +1590,21 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   margin-left: 4px;
 }
 
-.hpBar { 
+.hpBar {
   width: 100%;
   height: auto;
-  background-color: #bd0000;
+  background: linear-gradient(120deg, #550000 0%, #550000 10%, #cc1111 25%, #ee2222 40%, #cc1111 65%, #550000 80%, #550000 100%);
+  background-size: 200% 100%;
+  animation: hpFlux 3s linear infinite;
   align-items: center;
   text-align: left;
   line-height: 30px;
   border-radius: 4px;
+}
+
+@keyframes hpFlux {
+  0%   { background-position: 200% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .hpText {
@@ -1605,3 +1612,177 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   font-weight: 700;
   padding-left: 6px;
 }
+
+/* >-- ENIGMA GAMEPLAY --< */
+
+.enigmeBoxMulti {
+  line-height: normal;
+  height: auto;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.enigmeInfoRow {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.enigmeStatBox {
+  width: auto;
+  min-width: 120px;
+  padding: 0 16px;
+  font-variant: small-caps;
+}
+
+.enigmeStatBox.facile    { background-color: rgb(80, 160, 80); }
+.enigmeStatBox.moyen     { background-color: rgb(200, 140, 30); }
+.enigmeStatBox.difficile { background-color: rgb(180, 50, 50); }
+
+.enigmeStreakBox { background-color: rgb(80, 80, 160); }
+.enigmeStreakBox.streak-hot { background-color: rgb(180, 90, 0); }
+
+.enigmeFeedback {
+  width: 67%;
+  margin: 10px auto;
+  padding: 10px 16px;
+  font-size: 1rem;
+  font-variant: small-caps;
+  border: 2px solid;
+  box-sizing: border-box;
+}
+
+.enigmeFeedback.correct {
+  background-color: rgba(80, 200, 80, 0.15);
+  border-color: #50c850;
+  color: #80e880;
+}
+
+.enigmeFeedback.wrong {
+  background-color: rgba(200, 60, 60, 0.15);
+  border-color: #c83c3c;
+  color: #e88080;
+}
+
+.enigmeBtnGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 67%;
+  margin: 12px auto 0;
+}
+
+.enigmeBtnGrid .enigmaBtn {
+  width: 100%;
+  height: auto;
+  min-height: 70px;
+  line-height: normal;
+  padding: 16px;
+  box-sizing: border-box;
+  cursor: pointer;
+  border: none;
+}
+
+.coin-inline {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.btnChangerDiff {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: #ccc;
+  padding: 8px 24px;
+  font-size: 1rem;
+  font-variant: small-caps;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.btnChangerDiff:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.btnEnigmaDiff {
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 2px solid #fff;
+  color: #fff;
+  width: 260px;
+  height: 80px;
+  font-size: 1.5rem;
+  font-variant: small-caps;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.btnEnigmaDiff:hover    { background-color: rgba(255,255,255,0.35); }
+.btnEnigmaDiff.facile   { border-color: #50c850; color: #80e880; }
+.btnEnigmaDiff.moyen    { border-color: #ffaa00; color: #ffcc66; }
+.btnEnigmaDiff.difficile{ border-color: #e85050; color: #ff8080; }
+.btnEnigmaDiff.aleatoire{ border-color: #a48CEB; color: #c8b0ff; width: 260px; }
+.btnEnigmaDiff.unavailable { opacity: 0.4; cursor: not-allowed; }
+
+/* Mage category badge */
+.enigmeStatBox.mage { background-color: rgb(100, 60, 180); }
+
+/* Answer result states */
+@keyframes flashGreen {
+  0%   { background-color: rgba(255,255,255,0.5); }
+  40%  { background-color: rgba(80, 200, 80, 0.85); }
+  100% { background-color: rgba(80, 200, 80, 0.35); }
+}
+@keyframes flashRed {
+  0%   { background-color: rgba(255,255,255,0.5); }
+  40%  { background-color: rgba(200, 60, 60, 0.85); }
+  100% { background-color: rgba(200, 60, 60, 0.35); }
+}
+.enigmaBtnGrid .enigmaBtn.answer-correct {
+  background-color: rgba(80, 200, 80, 0.35);
+  border-color: #50c850;
+  color: #80e880;
+  animation: flashGreen 0.7s ease-out;
+}
+.enigmaBtnGrid .enigmaBtn.answer-wrong {
+  background-color: rgba(200, 60, 60, 0.35);
+  border-color: #c83c3c;
+  color: #e88080;
+  animation: flashRed 0.7s ease-out;
+}
+
+/* Next / menu action row */
+.enigmeActionRow {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.btnEnigmaNext {
+  background-color: rgba(80, 160, 80, 0.25);
+  border: 2px solid #50c850;
+  color: #80e880;
+  padding: 12px 36px;
+  font-size: 1.1rem;
+  font-variant: small-caps;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+.btnEnigmaNext:hover { background-color: rgba(80, 160, 80, 0.55); }
+.btnEnigmaMenu {
+  background-color: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.35);
+  color: #bbb;
+  padding: 12px 36px;
+  font-size: 1.1rem;
+  font-variant: small-caps;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+.btnEnigmaMenu:hover { background-color: rgba(255,255,255,0.2); color: #fff; }

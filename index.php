@@ -16,16 +16,14 @@ require_once 'BD/bd.php';
 <body>
     <?php require 'include/header.php'; ?>
     <main>
+        <?php $locked = (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) ? ' headerBtn locked' : ''; ?>
         <div class="btnBox">
             <a class="btnEnigma" href="magasin.php">Magasin</a>
         </div>
         <div class="btnBox" style="margin-top: -80px;">
-            <a class="btnEnigma" href="enigma.php">Enigma</a>
+            <a class="btnEnigma<?php echo $locked; ?>" href="enigma.php">Enigma</a>
         </div>
         <div class="btnBox">
-            <?php
-            $locked = (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) ? ' headerBtn locked' : '';
-            ?>
             <a class="btnAutre<?php echo $locked; ?>" href="panier.php">Panier</a>
             <a class="btnAutre<?php echo $locked; ?>" href="inventaire.php">Inventaire</a>
         </div>

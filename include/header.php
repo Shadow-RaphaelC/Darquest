@@ -35,6 +35,10 @@ if ($currentPage === 'panier.php') {
         'magasin.php' => 'Magasin',
         'inventaire.php' => 'Inventaire',
     ];
+} elseif ($currentPage === 'admin.php') {
+    $navLinks = [
+        'index.php' => 'Accueil',
+    ];
 }
 ?>
 <header>
