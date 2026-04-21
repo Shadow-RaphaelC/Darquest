@@ -12,12 +12,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
     $userId = (int) $_SESSION['user_id'];
     $result = DesequiperArmure($userId);
     if ($result['success']) {
-        $_SESSION['maxHP']      = $result['maxHP'];
+        $_SESSION['maxHP'] = $result['maxHP'];
         $_SESSION['pointDeVie'] = $result['pointDeVie'];
     }
     echo json_encode(array_merge($result, [
-        'newMaxHP' => (int)($_SESSION['maxHP']      ?? 100),
-        'newPV'    => (int)($_SESSION['pointDeVie'] ?? 0),
+        'newMaxHP' => (int) ($_SESSION['maxHP'] ?? 100),
+        'newPV' => (int) ($_SESSION['pointDeVie'] ?? 0),
     ]));
     exit;
 }
@@ -54,12 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
             <p><a class="btnAutre" href="index.php">Accueil</a></p>
         <?php else: ?>
             <?php
-            $userId        = (int) $_SESSION['user_id'];
-            $userName      = htmlspecialchars($_SESSION['username'] ?? 'Joueur', ENT_QUOTES, 'UTF-8');
-            $hp            = GetJoueurHP($userId);
-            $pv            = $hp['pointDeVie'];
-            $maxHP         = $hp['maxHP'];
-            $pvPct         = $maxHP > 0 ? min(100, (int)round($pv / $maxHP * 100)) : 0;
+            $userId = (int) $_SESSION['user_id'];
+            $userName = htmlspecialchars($_SESSION['username'] ?? 'Joueur', ENT_QUOTES, 'UTF-8');
+            $hp = GetJoueurHP($userId);
+            $pv = $hp['pointDeVie'];
+            $maxHP = $hp['maxHP'];
+            $pvPct = $maxHP > 0 ? min(100, (int) round($pv / $maxHP * 100)) : 0;
             $armureEquipee = GetArmureEquipee($userId);
             $armeEquipee   = GetArmeEquipee($userId);
             $enigmaStats   = GetEnigmaStats($userId);
@@ -68,8 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
             $rkName        = getRankName($ranked['rang']);
 
             // Fetch bonuses from DB
-            $healBonus      = 0;
-            $goldBonus      = 0;
+            $healBonus = 0;
+            $goldBonus = 0;
             $damageModifier = 1.00;
             $pdo = get_pdo();
             if ($pdo) {
@@ -77,10 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                     $s = $pdo->prepare('SELECT healBonus, goldBonus, damageModifier FROM Joueurs WHERE idJoueur = :id LIMIT 1');
                     $s->execute([':id' => $userId]);
                     $row = $s->fetch();
-                    $healBonus      = (int)   ($row['healBonus']      ?? 0);
-                    $goldBonus      = (int)   ($row['goldBonus']      ?? 0);
+                    $healBonus = (int) ($row['healBonus'] ?? 0);
+                    $goldBonus = (int) ($row['goldBonus'] ?? 0);
                     $damageModifier = (float) ($row['damageModifier'] ?? 1.00);
-                } catch (PDOException $e) {}
+                } catch (PDOException $e) {
+                }
             }
             ?>
 
@@ -100,22 +101,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                     <div class="profil-stat-row">
                         <span class="profil-stat-label">Bonus de soin</span>
                         <span class="profil-stat-value" style="color:<?= $healBonus >= 0 ? '#adf3ad' : '#f3adad' ?>;">
-                            <?= $healBonus >= 0 ? '+' : '' ?><?= $healBonus ?>%
+                            <?= $healBonus >= 0 ? '+' : '' ?>    <?= $healBonus ?>%
                         </span>
                     </div>
                     <div class="profil-stat-row">
                         <span class="profil-stat-label">Bonus gold</span>
                         <span class="profil-stat-value" style="color:<?= $goldBonus >= 0 ? '#ffd700' : '#f3adad' ?>;">
-                            <?= $goldBonus >= 0 ? '+' : '' ?><?= $goldBonus ?>%
+                            <?= $goldBonus >= 0 ? '+' : '' ?>    <?= $goldBonus ?>%
                         </span>
                     </div>
                     <div class="profil-stat-row">
                         <span class="profil-stat-label">Modificateur de dégâts reçus</span>
-                        <span class="profil-stat-value" style="color:<?= $damageModifier < 1.0 ? '#adf3ad' : ($damageModifier > 1.0 ? '#f3adad' : '#fff') ?>;">
+                        <span class="profil-stat-value"
+                            style="color:<?= $damageModifier < 1.0 ? '#adf3ad' : ($damageModifier > 1.0 ? '#f3adad' : '#fff') ?>;">
                             <?php
-                            if ($damageModifier < 1.0)     echo 'Dégâts /2';
-                            elseif ($damageModifier > 1.0) echo 'Dégâts ×2';
-                            else                           echo 'Normal';
+                            if ($damageModifier < 1.0)
+                                echo 'Dégâts /2';
+                            elseif ($damageModifier > 1.0)
+                                echo 'Dégâts ×2';
+                            else
+                                echo 'Normal';
                             ?>
                         </span>
                     </div>
@@ -131,8 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                         <?php $aStats = getArmorStats($armureEquipee['taille'], $armureEquipee['matiere']); ?>
                         <div class="profil-armor-card">
                             <img class="profil-armor-img"
-                                 src="<?= htmlspecialchars($armureEquipee['image'], ENT_QUOTES, 'UTF-8') ?>"
-                                 alt="<?= htmlspecialchars($armureEquipee['nom'], ENT_QUOTES, 'UTF-8') ?>">
+                                src="<?= htmlspecialchars($armureEquipee['image'], ENT_QUOTES, 'UTF-8') ?>"
+                                alt="<?= htmlspecialchars($armureEquipee['nom'], ENT_QUOTES, 'UTF-8') ?>">
                             <div class="profil-armor-info">
                                 <h3><?= htmlspecialchars($armureEquipee['nom'], ENT_QUOTES, 'UTF-8') ?></h3>
                                 <p>
@@ -158,8 +163,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                         <?php $wStats = getWeaponStats($armeEquipee['efficacite'], $armeEquipee['genre']); ?>
                         <div class="profil-armor-card">
                             <img class="profil-armor-img"
-                                 src="<?= htmlspecialchars($armeEquipee['image'], ENT_QUOTES, 'UTF-8') ?>"
-                                 alt="<?= htmlspecialchars($armeEquipee['nom'], ENT_QUOTES, 'UTF-8') ?>">
+                                src="<?= htmlspecialchars($armeEquipee['image'], ENT_QUOTES, 'UTF-8') ?>"
+                                alt="<?= htmlspecialchars($armeEquipee['nom'], ENT_QUOTES, 'UTF-8') ?>">
                             <div class="profil-armor-info">
                                 <h3><?= htmlspecialchars($armeEquipee['nom'], ENT_QUOTES, 'UTF-8') ?></h3>
                                 <p>
@@ -171,9 +176,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                                 <p>
                                     <?php
                                     $d = $wStats['damageModifier'];
-                                    if ($d < 1.0)     echo 'Dégâts /2 (réduction)';
-                                    elseif ($d > 1.0) echo 'Dégâts ×2 (pris)';
-                                    else              echo 'Dégâts normaux';
+                                    if ($d < 1.0)
+                                        echo 'Dégâts /2 (réduction)';
+                                    elseif ($d > 1.0)
+                                        echo 'Dégâts ×2 (pris)';
+                                    else
+                                        echo 'Dégâts normaux';
                                     ?>
                                 </p>
                             </div>
@@ -256,7 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
         }
 
         unequipAction('unequipArmureBtn', 'unequip_armure', function (data) {
-            const hpBar  = document.querySelector('.hpBar');
+            const hpBar = document.querySelector('.hpBar');
             const hpText = document.querySelector('.hpText');
             if (hpBar && hpText && data.newMaxHP > 0) {
                 const pct = Math.round(data.newPV / data.newMaxHP * 100);
