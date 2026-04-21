@@ -17,6 +17,9 @@ $currentHP = $hpData['pointDeVie'];
 if (!isset($_SESSION['enigme_streak'])) {
     $_SESSION['enigme_streak'] = GetJoueurStreak($idJoueur);
 }
+if (!isset($_SESSION['enigme_loss_streak'])) {
+    $_SESSION['enigme_loss_streak'] = 0;
+}
 
 // HP minimums per difficulty
 function hpMinForDiff(string $diff): int {
@@ -40,12 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'next_
 // --- POST: difficulty selection ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['select_diff'])) {
     $pick = $_POST['select_diff'];
-    if (in_array($pick, ['F', 'M', 'D', 'aleatoire'], true)) {
+    if (in_array($pick, ['F', 'M', 'D', 'G', 'aleatoire'], true)) {
         $minHP = hpMinForDiff($pick === 'aleatoire' ? 'F' : $pick);
         if ($currentHP < $minHP) {
             $_SESSION['enigme_hp_error'] = match($pick) {
                 'M' => 'Vous avez besoin d\'au moins 5 HP pour jouer en Moyen.',
                 'D' => 'Vous avez besoin d\'au moins 7 HP pour jouer en Difficile.',
+                'G' => 'Vous avez besoin d\'au moins 7 HP pour jouer en Mage.',
                 default => 'Vous avez besoin d\'au moins 3 HP pour jouer.',
             };
             header('Location: enigma.php');
@@ -108,6 +112,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['idReponse'], $_POST['
 
             $mageStatus = $idCategorie === 'G' ? ProcessMageProgress($idJoueur) : null;
 
+            FlagEnigmePigee($idEnigma, $idCategorie);
+
+            $_SESSION['enigme_loss_streak'] = 0;
+            $rankedResult = ProcessRanked($idJoueur, true, $newStreak, 0);
+
             $coins = GetJoueurCoins($idJoueur);
             $_SESSION['gold']   = $coins['gold'];
             $_SESSION['argent'] = $coins['argent'];
@@ -120,7 +129,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['idReponse'], $_POST['
             $dmgMod   = GetJoueurDamageModifier($idJoueur);
             $damage   = max(1, (int) round($baseDmg * $dmgMod));
             PrendreDegatEnigme($idJoueur, $damage);
+
+            $lossStreak = $_SESSION['enigme_loss_streak'] + 1;
+            $_SESSION['enigme_loss_streak'] = $lossStreak;
+            $rankedResult = ProcessRanked($idJoueur, false, 0, $lossStreak);
         }
+
+        InsererStatistique($idJoueur, $idEnigma, $correct ? 1 : 0);
 
         $_SESSION['enigme_answered'] = [
             'correct'     => $correct,
@@ -130,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['idReponse'], $_POST['
             'streak'      => $_SESSION['enigme_streak'],
             'damage'      => $damage,
             'mage_status' => $mageStatus ?? null,
+            'ranked'      => $rankedResult ?? [],
         ];
     }
 
@@ -147,7 +163,7 @@ if ($selectedDiff !== null && !isset($_SESSION['enigme_current'])) {
     if ($currentHP < $minHP) {
         $debugError = 'HP insuffisant pour continuer.';
     } else {
-        $cat     = in_array($selectedDiff, ['F', 'M', 'D'], true) ? $selectedDiff : '';
+        $cat     = in_array($selectedDiff, ['F', 'M', 'D', 'G'], true) ? $selectedDiff : '';
         $fetched = GetEnigmeAleatoire($cat);
         if (isset($fetched['__error'])) {
             $debugError = $fetched['__error'];
@@ -158,7 +174,6 @@ if ($selectedDiff !== null && !isset($_SESSION['enigme_current'])) {
             } else {
                 shuffle($fetched['reponses']);
                 $_SESSION['enigme_current'] = $fetched;
-                FlagEnigmePigee($fetched['idEnigma'], $fetched['idCategorie']);
             }
         }
     }
@@ -206,9 +221,55 @@ $coinColors  = ['gold' => '#ffd700', 'argent' => '#c0c0c0', 'bronze' => '#cd7f32
             </form>
         </div>
         <div class="btnBox" style="margin-top:20px;">
-            <form method="POST" action="enigma.php" style="display:flex; justify-content:center;">
+            <form method="POST" action="enigma.php" style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
                 <button type="submit" class="btnEnigmaDiff aleatoire" name="select_diff" value="aleatoire">Aleatoire</button>
+                <button type="submit" class="btnEnigmaDiff mage <?= $currentHP < 7 ? 'unavailable' : '' ?>"
+                    name="select_diff" value="G">★ Mage</button>
             </form>
+        </div>
+
+        <?php
+            $enigmaStats  = GetEnigmaStats($idJoueur);
+            $menuRanked   = GetRankedData($idJoueur);
+            $menuRkColor  = getRankColor($menuRanked['rang']);
+            $menuRkName   = getRankName($menuRanked['rang']);
+        ?>
+        <div class="profil-stat-box" style="max-width:360px; margin:28px auto 0; border-color:<?= $menuRkColor ?>;">
+            <h2 style="color:<?= $menuRkColor ?>;">&#9733; <?= htmlspecialchars($menuRkName) ?></h2>
+            <div class="profil-stat-row">
+                <span class="profil-stat-label">LP</span>
+                <span class="profil-stat-value"><?= $menuRanked['lp'] ?> / 100</span>
+            </div>
+            <div class="profil-stat-row">
+                <span class="profil-stat-label">MMR</span>
+                <span class="profil-stat-value" style="color:#aaa;"><?= $menuRanked['mmr'] ?></span>
+            </div>
+            <div class="profil-hp-bar-wrap" style="margin-top:10px;">
+                <div class="profil-hp-bar" style="width:<?= $menuRanked['lp'] ?>%; background:<?= $menuRkColor ?>;"></div>
+            </div>
+        </div>
+
+        <div class="profil-stat-box" style="max-width:360px; margin:16px auto 0;">
+            <h2>Mes statistiques</h2>
+            <div class="profil-stat-row">
+                <span class="profil-stat-label">Enigmes jouées</span>
+                <span class="profil-stat-value"><?= $enigmaStats['total'] ?></span>
+            </div>
+            <div class="profil-stat-row">
+                <span class="profil-stat-label">Réussies</span>
+                <span class="profil-stat-value" style="color:#adf3ad;"><?= $enigmaStats['reussies'] ?></span>
+            </div>
+            <div class="profil-stat-row">
+                <span class="profil-stat-label">Ratées</span>
+                <span class="profil-stat-value" style="color:#f3adad;"><?= $enigmaStats['ratees'] ?></span>
+            </div>
+            <div class="profil-stat-row">
+                <span class="profil-stat-label">Taux de réussite</span>
+                <span class="profil-stat-value" style="color:<?= $enigmaStats['taux'] >= 50 ? '#adf3ad' : '#f3adad' ?>;"><?= $enigmaStats['taux'] ?>%</span>
+            </div>
+            <div class="profil-hp-bar-wrap" style="margin-top:10px;">
+                <div class="profil-hp-bar" style="width:<?= $enigmaStats['taux'] ?>%; background:<?= $enigmaStats['taux'] >= 50 ? '#4caf50' : '#c0392b' ?>;"></div>
+            </div>
         </div>
 
         <?php else: ?>
@@ -228,12 +289,18 @@ $coinColors  = ['gold' => '#ffd700', 'argent' => '#c0c0c0', 'bronze' => '#cd7f32
             $diffCls = $diffClass[$diffKey]  ?? '';
         ?>
 
+        <?php
+            $ranked = GetRankedData($idJoueur);
+        ?>
         <div class="enigmeInfoRow">
             <div class="statBox enigmeStatBox <?= $isMage ? 'mage' : $diffCls ?>">
                 <?= $isMage ? '★ ' : '' ?><?= htmlspecialchars($diffLbl, ENT_QUOTES, 'UTF-8') ?>
             </div>
             <div class="statBox enigmeStatBox enigmeStreakBox <?= $streak >= 3 ? 'streak-hot' : '' ?>">
                 Serie: <?= $streak ?>
+            </div>
+            <div class="statBox enigmeStatBox" style="border-color:<?= getRankColor($ranked['rang']) ?>; color:<?= getRankColor($ranked['rang']) ?>;">
+                <?= htmlspecialchars(getRankName($ranked['rang'])) ?> &middot; <?= $ranked['lp'] ?> LP
             </div>
         </div>
 
@@ -267,6 +334,28 @@ $coinColors  = ['gold' => '#ffd700', 'argent' => '#c0c0c0', 'bronze' => '#cd7f32
                 <?php if ($answered['damage'] > 0): ?>
                     <span style="color:#e88080;">-<?= $answered['damage'] ?> HP</span>
                 <?php endif; ?>
+            <?php endif; ?>
+            <?php if (!empty($answered['ranked'])): ?>
+                <?php
+                    $rk = $answered['ranked'];
+                    $lpChange   = $rk['lpChange'];
+                    $rankChange = $rk['rankChange'] ?? null;
+                    $lpCol      = $lpChange >= 0 ? '#adf3ad' : '#f3adad';
+                    $lpSign     = $lpChange >= 0 ? '+' : '';
+                    $rkColor    = getRankColor($rk['rang']);
+                    $rkName     = getRankName($rk['rang']);
+                ?>
+                <div class="ranked-feedback-row">
+                    <span style="color:<?= $lpCol ?>;"><?= $lpSign ?><?= $lpChange ?> LP</span>
+                    &nbsp;&middot;&nbsp;
+                    <span style="color:<?= $rkColor ?>; font-weight:700;"><?= htmlspecialchars($rkName) ?></span>
+                    <span style="color:#aaa;"> <?= $rk['lp'] ?>/100 LP</span>
+                    <?php if ($rankChange === 'up'): ?>
+                        &nbsp;<span style="color:#ffd700; font-weight:700;">&#9650; Promotion!</span>
+                    <?php elseif ($rankChange === 'down'): ?>
+                        &nbsp;<span style="color:#f3adad; font-weight:700;">&#9660; Rétrogradation</span>
+                    <?php endif; ?>
+                </div>
             <?php endif; ?>
         </div>
 

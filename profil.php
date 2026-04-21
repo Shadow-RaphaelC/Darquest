@@ -62,6 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
             $pvPct         = $maxHP > 0 ? min(100, (int)round($pv / $maxHP * 100)) : 0;
             $armureEquipee = GetArmureEquipee($userId);
             $armeEquipee   = GetArmeEquipee($userId);
+            $enigmaStats   = GetEnigmaStats($userId);
+            $ranked        = GetRankedData($userId);
+            $rkColor       = getRankColor($ranked['rang']);
+            $rkName        = getRankName($ranked['rang']);
 
             // Fetch bonuses from DB
             $healBonus      = 0;
@@ -179,6 +183,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                         <p class="profil-no-armor">Aucune arme équipée.</p>
                         <p><a class="btnAutre" href="inventaire.php" style="font-size:0.95rem;">Voir l'inventaire</a></p>
                     <?php endif; ?>
+                </div>
+
+                <!-- Ranked -->
+                <div class="profil-stat-box" style="border-color:<?= $rkColor ?>;">
+                    <h2 style="color:<?= $rkColor ?>;">&#9733; <?= htmlspecialchars($rkName) ?></h2>
+                    <div class="profil-stat-row">
+                        <span class="profil-stat-label">LP</span>
+                        <span class="profil-stat-value"><?= $ranked['lp'] ?> / 100</span>
+                    </div>
+                    <div class="profil-stat-row">
+                        <span class="profil-stat-label">MMR</span>
+                        <span class="profil-stat-value" style="color:#aaa;"><?= $ranked['mmr'] ?></span>
+                    </div>
+                    <div class="profil-hp-bar-wrap" style="margin-top:10px;">
+                        <div class="profil-hp-bar" style="width:<?= $ranked['lp'] ?>%; background:<?= $rkColor ?>;"></div>
+                    </div>
+                </div>
+
+                <!-- Enigma stats -->
+                <div class="profil-stat-box">
+                    <h2>Statistiques Enigma</h2>
+                    <div class="profil-stat-row">
+                        <span class="profil-stat-label">Enigmes jouées</span>
+                        <span class="profil-stat-value"><?= $enigmaStats['total'] ?></span>
+                    </div>
+                    <div class="profil-stat-row">
+                        <span class="profil-stat-label">Réussies</span>
+                        <span class="profil-stat-value" style="color:#adf3ad;"><?= $enigmaStats['reussies'] ?></span>
+                    </div>
+                    <div class="profil-stat-row">
+                        <span class="profil-stat-label">Ratées</span>
+                        <span class="profil-stat-value" style="color:#f3adad;"><?= $enigmaStats['ratees'] ?></span>
+                    </div>
+                    <div class="profil-stat-row">
+                        <span class="profil-stat-label">Taux de réussite</span>
+                        <span class="profil-stat-value" style="color:<?= $enigmaStats['taux'] >= 50 ? '#adf3ad' : '#f3adad' ?>;"><?= $enigmaStats['taux'] ?>%</span>
+                    </div>
+                    <div class="profil-hp-bar-wrap" style="margin-top:10px;">
+                        <div class="profil-hp-bar" style="width:<?= $enigmaStats['taux'] ?>%; background:<?= $enigmaStats['taux'] >= 50 ? '#4caf50' : '#c0392b' ?>;"></div>
+                    </div>
                 </div>
 
             </div>

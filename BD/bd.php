@@ -1393,3 +1393,141 @@ function AjouterPiecesBonus(int $idJoueur, int $montant, string $type): bool
         return false;
     }
 }
+
+// -------------------------
+// Statistique: insert enigma result (INSERT IGNORE to skip duplicate attempts)
+// -------------------------
+function InsererStatistique(int $idJoueur, int $idQuestion, int $estReussi): bool
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return false;
+    try {
+        // ON DUPLICATE KEY accumulates successes so repeated plays (after flag reset) are counted
+        $stmt = $pdo->prepare('INSERT INTO Statistique (idJoueur, idQuestion, estReussi) VALUES (:j, :q, :r) ON DUPLICATE KEY UPDATE estReussi = estReussi + VALUES(estReussi)');
+        $stmt->execute([':j' => $idJoueur, ':q' => $idQuestion, ':r' => $estReussi]);
+        return true;
+    } catch (PDOException $e) {
+        error_log('InsererStatistique error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+// -------------------------
+// Statistique: get player enigma stats
+// -------------------------
+function GetEnigmaStats(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false) return ['total' => 0, 'reussies' => 0, 'ratees' => 0, 'taux' => 0];
+    try {
+        // reussies = questions answered correctly at least once (estReussi > 0)
+        // ratees   = questions never answered correctly (estReussi = 0)
+        $stmt = $pdo->prepare('SELECT COUNT(*) AS total, SUM(estReussi > 0) AS reussies FROM Statistique WHERE idJoueur = :j');
+        $stmt->execute([':j' => $idJoueur]);
+        $row      = $stmt->fetch();
+        $total    = (int) ($row['total']    ?? 0);
+        $reussies = (int) ($row['reussies'] ?? 0);
+        $ratees   = $total - $reussies;
+        $taux     = $total > 0 ? (int) round($reussies / $total * 100) : 0;
+        return compact('total', 'reussies', 'ratees', 'taux');
+    } catch (PDOException $e) {
+        error_log('GetEnigmaStats error: ' . $e->getMessage());
+        return ['total' => 0, 'reussies' => 0, 'ratees' => 0, 'taux' => 0];
+    }
+}
+
+// -------------------------
+// Ranked system helpers
+// Requires: ALTER TABLE Joueurs ADD COLUMN rang TINYINT UNSIGNED NOT NULL DEFAULT 0,
+//                                ADD COLUMN lp SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+//                                ADD COLUMN mmr INT UNSIGNED NOT NULL DEFAULT 1000;
+// -------------------------
+function getRankName(int $rang): string
+{
+    return ['Novice', 'Bronze', 'Argent', 'Or', 'Platine', 'Diamant', 'Légende'][$rang] ?? 'Légende';
+}
+
+function getRankColor(int $rang): string
+{
+    return ['#888888', '#cd7f32', '#c0c0c0', '#ffd700', '#00e5cc', '#00bfff', '#ff6b35'][$rang] ?? '#ff6b35';
+}
+
+function GetRankedData(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['rang' => 0, 'lp' => 0, 'mmr' => 1000];
+    try {
+        $s = $pdo->prepare('SELECT rang, lp, mmr FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $s->execute([':id' => $idJoueur]);
+        $row = $s->fetch();
+        return [
+            'rang' => (int)($row['rang'] ?? 0),
+            'lp'   => (int)($row['lp']   ?? 0),
+            'mmr'  => (int)($row['mmr']  ?? 1000),
+        ];
+    } catch (PDOException $e) {
+        error_log('GetRankedData error: ' . $e->getMessage());
+        return ['rang' => 0, 'lp' => 0, 'mmr' => 1000];
+    }
+}
+
+// Process a ranked result after answering an enigma.
+// winStreak / lossStreak come from the session.
+// LP gain formula targets ~20 correct answers per rank (base 5 LP/correct).
+// Streak shortens that; losses push it out. MMR nudges ±LP slightly.
+function ProcessRanked(int $idJoueur, bool $correct, int $winStreak, int $lossStreak): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return [];
+    try {
+        $pdo->beginTransaction();
+        $s = $pdo->prepare('SELECT rang, lp, mmr FROM Joueurs WHERE idJoueur = :id FOR UPDATE');
+        $s->execute([':id' => $idJoueur]);
+        $row  = $s->fetch();
+        $rang = (int)($row['rang'] ?? 0);
+        $lp   = (int)($row['lp']   ?? 0);
+        $mmr  = (int)($row['mmr']  ?? 1000);
+
+        $mmrFactor = ($mmr - 1000) / 200;
+
+        if ($correct) {
+            $lpChange = (int) round(max(3, min(25, 5 + floor($winStreak / 2) + $mmrFactor)));
+            $mmr      = min(3000, $mmr + 15);
+        } else {
+            $penalty  = max(0, -$mmrFactor);
+            $lpChange = -(int) round(max(3, min(20, 5 + floor($lossStreak / 2) + $penalty)));
+            $mmr      = max(500, $mmr - 10);
+        }
+
+        $lp += $lpChange;
+
+        $rankChange = null;
+        if ($lp >= 100 && $rang < 6) {
+            $rang++;
+            $lp = 0;
+            $rankChange = 'up';
+        } elseif ($lp >= 100) {
+            $lp = 99;
+        }
+
+        if ($lp < 0) {
+            if ($rang > 0) {
+                $rang--;
+                $lp = 75;
+                $rankChange = 'down';
+            } else {
+                $lp = 0;
+            }
+        }
+
+        $u = $pdo->prepare('UPDATE Joueurs SET rang = :rang, lp = :lp, mmr = :mmr WHERE idJoueur = :id');
+        $u->execute([':rang' => $rang, ':lp' => $lp, ':mmr' => $mmr, ':id' => $idJoueur]);
+        $pdo->commit();
+
+        return compact('rang', 'lp', 'mmr', 'lpChange', 'rankChange');
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log('ProcessRanked error: ' . $e->getMessage());
+        return [];
+    }
+}

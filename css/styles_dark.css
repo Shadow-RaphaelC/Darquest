@@ -1669,6 +1669,14 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
   color: #e88080;
 }
 
+.ranked-feedback-row {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  font-size: 0.95rem;
+  color: #ccc;
+}
+
 .enigmeBtnGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1727,6 +1735,7 @@ body.blurred > *:not(#authModalOverlay):not(#itemModalOverlay) {
 .btnEnigmaDiff.moyen    { border-color: #ffaa00; color: #ffcc66; }
 .btnEnigmaDiff.difficile{ border-color: #e85050; color: #ff8080; }
 .btnEnigmaDiff.aleatoire{ border-color: #a48CEB; color: #c8b0ff; width: 260px; }
+.btnEnigmaDiff.mage     { border-color: #7c4dbe; color: #c8b0ff; }
 .btnEnigmaDiff.unavailable { opacity: 0.4; cursor: not-allowed; }
 
 /* Mage category badge */
