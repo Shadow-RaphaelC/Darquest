@@ -1173,10 +1173,10 @@ function AjouterEnigme(string $enigme, string $difficulte, string $idCategorie, 
 function GetEnigmeAleatoire(string $categorie = ''): array
 {
     $pdo = get_pdo();
-    if ($pdo === false) return [];
+if ($pdo === false) return [];
 
     try {
-        if ($categorie !== '' && in_array($categorie, ['F', 'M', 'D'], true)) {
+        if ($categorie !== '' && in_array($categorie, ['F', 'M', 'D', 'G'], true)) {
             $stmt = $pdo->prepare('CALL EnigmeParCategorie(:cat)');
             $stmt->execute([':cat' => $categorie]);
         } else {
