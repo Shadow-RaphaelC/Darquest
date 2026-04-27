@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
             $armureEquipee = GetArmureEquipee($userId);
             $armeEquipee   = GetArmeEquipee($userId);
             $enigmaStats   = GetEnigmaStats($userId);
+            $questStats    = GetQuestStats($userId);
             $ranked        = GetRankedData($userId);
             $rkColor       = getRankColor($ranked['rang']);
             $rkName        = getRankName($ranked['rang']);
@@ -198,7 +199,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                     <h2 style="color:<?= $rkColor ?>;">&#9733; <?= htmlspecialchars($rkName) ?></h2>
                     <div class="profil-stat-row">
                         <span class="profil-stat-label">LP</span>
-                        <span class="profil-stat-value"><?= $ranked['lp'] ?> / 100</span>
+                        <span class="profil-stat-value">
+                            <?php if ($ranked['rang'] >= 14): ?>
+                                <span style="color:<?= $rkColor ?>; font-weight:700;">MAX</span>
+                            <?php else: ?>
+                                <?= $ranked['lp'] ?> / 100
+                            <?php endif; ?>
+                        </span>
                     </div>
                     <div class="profil-stat-row">
                         <span class="profil-stat-label">MMR</span>
@@ -209,24 +216,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                     </div>
                 </div>
 
-                <!-- Enigma stats -->
+                <!-- Player quest stats -->
                 <div class="profil-stat-box">
-                    <h2>Statistiques Enigma</h2>
-                    <div class="profil-stat-row">
-                        <span class="profil-stat-label">Enigmes jouées</span>
-                        <span class="profil-stat-value"><?= $enigmaStats['total'] ?></span>
+                    <h2>Statistiques</h2>
+                    <div class="profil-stat-rank">
+                        <span class="profil-stat-label">Rang : </span>
+                        <span class="profil-stat-value" style="color:<?= $rkColor ?>;"><?= htmlspecialchars($rkName) ?></span>
                     </div>
-                    <div class="profil-stat-row">
-                        <span class="profil-stat-label">Réussies</span>
-                        <span class="profil-stat-value" style="color:#adf3ad;"><?= $enigmaStats['reussies'] ?></span>
-                    </div>
-                    <div class="profil-stat-row">
-                        <span class="profil-stat-label">Ratées</span>
-                        <span class="profil-stat-value" style="color:#f3adad;"><?= $enigmaStats['ratees'] ?></span>
-                    </div>
-                    <div class="profil-stat-row">
-                        <span class="profil-stat-label">Taux de réussite</span>
-                        <span class="profil-stat-value" style="color:<?= $enigmaStats['taux'] >= 50 ? '#adf3ad' : '#f3adad' ?>;"><?= $enigmaStats['taux'] ?>%</span>
+                    <div class="profil-stat-grid">
+                        <div class="profil-stat-row">
+                            <span class="profil-stat-label">LP</span>
+                            <span class="profil-stat-value" style="color:<?= $rkColor ?>;">
+                                <?php if ($ranked['rang'] >= 14): ?>
+                                    <span style="font-weight:700;">MAX</span>
+                                <?php else: ?>
+                                    <?= $ranked['lp'] ?> / 100
+                                <?php endif; ?>
+                            </span>
+                        </div>
+                        <div class="profil-stat-row">
+                            <span class="profil-stat-label">MMR</span>
+                            <span class="profil-stat-value" style="color:#aaa;"><?= $ranked['mmr'] ?></span>
+                        </div>
+                        <div class="profil-stat-row">
+                            <span class="profil-stat-label">Enigmes jouées (carrière)</span>
+                            <span class="profil-stat-value"><?= $enigmaStats['totalPlays'] ?></span>
+                        </div>
+                        <div class="profil-stat-row">
+                            <span class="profil-stat-label">Taux de réussite</span>
+                            <span class="profil-stat-value" style="color:<?= $enigmaStats['taux'] >= 50 ? '#adf3ad' : '#f3adad' ?>;"><?= $enigmaStats['taux'] ?>%</span>
+                        </div>
+                        <div class="profil-stat-row">
+                            <span class="profil-stat-label">Faciles réussies</span>
+                            <span class="profil-stat-value"><?= $questStats['facile'] ?></span>
+                        </div>
+                        <div class="profil-stat-row">
+                            <span class="profil-stat-label">Moyennes réussies</span>
+                            <span class="profil-stat-value"><?= $questStats['moyen'] ?></span>
+                        </div>
+                        <div class="profil-stat-row">
+                            <span class="profil-stat-label">Difficiles réussies</span>
+                            <span class="profil-stat-value"><?= $questStats['difficile'] ?></span>
+                        </div>
+                        <div class="profil-stat-row">
+                            <span class="profil-stat-label">Magie réussies</span>
+                            <span class="profil-stat-value"><?= $questStats['magie'] ?></span>
+                        </div>
+                        <div class="profil-stat-row">
+                            <span class="profil-stat-label">Meilleure série</span>
+                            <span class="profil-stat-value"><?= $questStats['bestStreak'] ?></span>
+                        </div>
                     </div>
                     <div class="profil-hp-bar-wrap" style="margin-top:10px;">
                         <div class="profil-hp-bar" style="width:<?= $enigmaStats['taux'] ?>%; background:<?= $enigmaStats['taux'] >= 50 ? '#4caf50' : '#c0392b' ?>;"></div>

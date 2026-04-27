@@ -369,13 +369,15 @@ function AfficherInventaire(int $idJoueur): array
     try {
         $stmt = $pdo->prepare(
             'SELECT inv.idItem, inv.quantiteInvenatire, i.nom, i.prix, i.image, i.typeItem,
-                    s.rarete, arm.taille, arm.matiere, arme.efficacite, arme.genre, pot.effet
+                    s.rarete, ts.ptVie AS sortPtVie,
+                    arm.taille, arm.matiere, arme.efficacite, arme.genre, pot.effet
              FROM Inventaire inv
-             JOIN Items i          ON i.idItem    = inv.idItem
-             LEFT JOIN Sorts   s   ON s.idItem    = inv.idItem
-             LEFT JOIN Armures arm ON arm.idItem  = inv.idItem
-             LEFT JOIN Armes   arme ON arme.idItem = inv.idItem
-             LEFT JOIN Potions pot ON pot.idItem  = inv.idItem
+             JOIN Items i              ON i.idItem      = inv.idItem
+             LEFT JOIN Sorts   s       ON s.idItem      = inv.idItem
+             LEFT JOIN TypeSorts ts    ON ts.typeSorts  = s.typeSorts
+             LEFT JOIN Armures arm     ON arm.idItem    = inv.idItem
+             LEFT JOIN Armes   arme    ON arme.idItem   = inv.idItem
+             LEFT JOIN Potions pot     ON pot.idItem    = inv.idItem
              WHERE inv.idJoueur = :idJoueur'
         );
         $stmt->execute([':idJoueur' => $idJoueur]);
@@ -587,11 +589,11 @@ function GetMageStatus(int $idJoueur): array
         return ['isMage' => false];
     try {
         $stmt = $pdo->prepare(
-            'SELECT estMage FROM Joueurs WHERE idJoueur = :id LIMIT 1'
+            'SELECT estMage, quetesMagieComplete FROM Joueurs WHERE idJoueur = :id LIMIT 1'
         );
         $stmt->execute([':id' => $idJoueur]);
         $row = $stmt->fetch();
-        return $row ?: ['estMage' => 0];
+        return $row ?: ['estMage' => 0, 'quetesMagieComplete' => 0];
     } catch (PDOException $e) {
         error_log('GetMageStatus error: ' . $e->getMessage());
         return ['estMage' => 0];
@@ -1004,9 +1006,10 @@ function UtiliserPotion(int $idJoueur, int $idItem): array
     try {
         $pdo->beginTransaction();
 
-        // Get potion effet + inventory qty
+        // Ensure healPct column exists then fetch potion data
+        _ensurePotionHealPct($pdo);
         $stmt = $pdo->prepare(
-            'SELECT p.effet, inv.quantiteInvenatire
+            'SELECT p.effet, COALESCE(p.healPct, 0) AS dbHealPct, inv.quantiteInvenatire
              FROM Potions p
              JOIN Inventaire inv ON inv.idItem = p.idItem
              WHERE p.idItem = :idItem AND inv.idJoueur = :idJoueur'
@@ -1040,8 +1043,9 @@ function UtiliserPotion(int $idJoueur, int $idItem): array
             return ['success' => false, 'message' => 'Vos HP sont déjà au maximum.'];
         }
 
-        // Calculate heal
-        $healPct    = getPotionHealPct((string) $row['effet']);
+        // Use DB heal % if set by admin, otherwise fall back to PHP map
+        $dbHealPct  = (int)$row['dbHealPct'];
+        $healPct    = $dbHealPct > 0 ? $dbHealPct : getPotionHealPct((string)$row['effet']);
         $baseHeal   = (int) round($maxHP * $healPct / 100);
         $finalHeal  = (int) round($baseHeal * (1 + $healBonus / 100));
         $finalHeal  = max(1, $finalHeal);
@@ -1079,6 +1083,87 @@ function UtiliserPotion(int $idJoueur, int $idItem): array
 }
 
 // -------------------------
+// Use Sort (flat HP heal from TypeSorts.ptVie)
+// -------------------------
+function UtiliserSort(int $idJoueur, int $idItem): array
+{
+    $pdo = get_pdo();
+    if ($pdo === false)
+        return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare(
+            'SELECT ts.ptVie, inv.quantiteInvenatire
+             FROM Sorts s
+             JOIN TypeSorts ts    ON ts.typeSorts = s.typeSorts
+             JOIN Inventaire inv  ON inv.idItem   = s.idItem
+             WHERE s.idItem = :idItem AND inv.idJoueur = :idJoueur'
+        );
+        $stmt->execute([':idItem' => $idItem, ':idJoueur' => $idJoueur]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Sort introuvable dans l\'inventaire.'];
+        }
+
+        $stmt = $pdo->prepare(
+            'SELECT pointDeVie, maxHP, healBonus FROM Joueurs WHERE idJoueur = :id LIMIT 1'
+        );
+        $stmt->execute([':id' => $idJoueur]);
+        $player = $stmt->fetch();
+
+        if (!$player) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Joueur introuvable.'];
+        }
+
+        $pv        = (int) $player['pointDeVie'];
+        $maxHP     = (int) $player['maxHP'];
+        $healBonus = (int) $player['healBonus'];
+
+        if ($pv >= $maxHP) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Vos HP sont déjà au maximum.'];
+        }
+
+        $baseHeal  = (int) $row['ptVie'];
+        $finalHeal = (int) round($baseHeal * (1 + $healBonus / 100));
+        $finalHeal = max(1, $finalHeal);
+        $newPV     = min($pv + $finalHeal, $maxHP);
+
+        $pdo->prepare('UPDATE Joueurs SET pointDeVie = :pv WHERE idJoueur = :id')
+            ->execute([':pv' => $newPV, ':id' => $idJoueur]);
+
+        $newQte = (int) $row['quantiteInvenatire'] - 1;
+        if ($newQte <= 0) {
+            $pdo->prepare('DELETE FROM Inventaire WHERE idJoueur = :idJoueur AND idItem = :idItem')
+                ->execute([':idJoueur' => $idJoueur, ':idItem' => $idItem]);
+        } else {
+            $pdo->prepare('UPDATE Inventaire SET quantiteInvenatire = :qte WHERE idJoueur = :idJoueur AND idItem = :idItem')
+                ->execute([':qte' => $newQte, ':idJoueur' => $idJoueur, ':idItem' => $idItem]);
+        }
+
+        $pdo->commit();
+
+        return [
+            'success'  => true,
+            'healed'   => $finalHeal,
+            'newPV'    => $newPV,
+            'maxHP'    => $maxHP,
+            'consumed' => $newQte <= 0,
+        ];
+
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('UtiliserSort error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de l\'utilisation.'];
+    }
+}
+
+// -------------------------
 // Hourly potion restock (lazy cron)
 // -------------------------
 function checkPotionRestock(): void
@@ -1091,7 +1176,7 @@ function checkPotionRestock(): void
         $stmt = $pdo->prepare(
             "UPDATE Config SET valeur = NOW()
              WHERE cle = 'last_potion_restock'
-             AND valeur <= DATE_SUB(NOW(), INTERVAL 6 HOUR)"
+             AND valeur <= DATE_SUB(NOW(), INTERVAL 24 HOUR)"
         );
         $stmt->execute();
 
@@ -1225,14 +1310,14 @@ function ProcessMageProgress(int $idJoueur): bool
     $pdo = get_pdo();
     if ($pdo === false) return false;
     try {
-        $stmt = $pdo->prepare('SELECT mageCount, estMage FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt = $pdo->prepare('SELECT quetesMagieComplete, estMage FROM Joueurs WHERE idJoueur = :id LIMIT 1');
         $stmt->execute([':id' => $idJoueur]);
         $row = $stmt->fetch();
 
         if ((int)$row['estMage']) return false;
 
-        $newCount = (int)$row['mageCount'] + 1;
-        $pdo->prepare('UPDATE Joueurs SET mageCount = :c WHERE idJoueur = :id')
+        $newCount = (int)$row['quetesMagieComplete'] + 1;
+        $pdo->prepare('UPDATE Joueurs SET quetesMagieComplete = :c WHERE idJoueur = :id')
             ->execute([':c' => $newCount, ':id' => $idJoueur]);
 
         if ($newCount >= 3) {
@@ -1293,12 +1378,90 @@ function SetJoueurStreak(int $idJoueur, int $streak): bool
     $pdo = get_pdo();
     if ($pdo === false) return false;
     try {
-        $stmt = $pdo->prepare('UPDATE Joueurs SET streak = :streak WHERE idJoueur = :id');
-        $stmt->execute([':streak' => max(0, $streak), ':id' => $idJoueur]);
+        $val = max(0, $streak);
+        $pdo->prepare('UPDATE Joueurs SET streak = :streak WHERE idJoueur = :id')
+            ->execute([':streak' => $val, ':id' => $idJoueur]);
+        try {
+            $pdo->prepare('UPDATE Joueurs SET bestStreak = GREATEST(COALESCE(bestStreak, 0), :s) WHERE idJoueur = :id')
+                ->execute([':s' => $val, ':id' => $idJoueur]);
+        } catch (PDOException $e) { /* bestStreak column may not exist yet */ }
         return true;
     } catch (PDOException $e) {
         error_log('SetJoueurStreak error: ' . $e->getMessage());
         return false;
+    }
+}
+
+// -------------------------
+// Quest Statistics
+// Requires: ALTER TABLE Joueurs ADD COLUMN IF NOT EXISTS bestStreak INT UNSIGNED NOT NULL DEFAULT 0;
+// -------------------------
+function GetQuestStats(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    $default = ['total' => 0, 'facile' => 0, 'moyen' => 0, 'difficile' => 0, 'magie' => 0, 'bestStreak' => 0];
+    if (!$pdo) return $default;
+
+    // Ensure career columns exist (profil.php may load before any enigma is played)
+    static $colChecked2 = false;
+    if (!$colChecked2) {
+        foreach (['totalPlays', 'correctF', 'correctM', 'correctD', 'correctG'] as $col) {
+            try {
+                $exists = $pdo->query(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Joueurs'
+                     AND COLUMN_NAME = '$col'"
+                )->fetchColumn();
+                if (!$exists) {
+                    $pdo->exec("ALTER TABLE Joueurs ADD COLUMN $col INT UNSIGNED NOT NULL DEFAULT 0");
+                }
+            } catch (PDOException $e) { /* ignore */ }
+        }
+        $colChecked2 = true;
+    }
+
+    try {
+        $s = $pdo->prepare('SELECT GREATEST(COALESCE(bestStreak, 0), COALESCE(streak, 0)) AS best FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $s->execute([':id' => $idJoueur]);
+        $bestStreak = (int)($s->fetchColumn() ?: 0);
+    } catch (PDOException $e) {
+        try {
+            $s = $pdo->prepare('SELECT COALESCE(streak, 0) FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+            $s->execute([':id' => $idJoueur]);
+            $bestStreak = (int)($s->fetchColumn() ?: 0);
+        } catch (PDOException $e2) {
+            $bestStreak = 0;
+        }
+    }
+
+    try {
+        $s2 = $pdo->prepare(
+            'SELECT COALESCE(correctF, 0) AS cF,
+                    COALESCE(correctM, 0) AS cM,
+                    COALESCE(correctD, 0) AS cD,
+                    COALESCE(correctG, 0) AS cG
+             FROM Joueurs WHERE idJoueur = :j LIMIT 1'
+        );
+        $s2->execute([':j' => $idJoueur]);
+        $row = $s2->fetch();
+
+        $facile    = (int)($row['cF'] ?? 0);
+        $moyen     = (int)($row['cM'] ?? 0);
+        $difficile = (int)($row['cD'] ?? 0);
+        $magie     = (int)($row['cG'] ?? 0);
+        $total     = $facile + $moyen + $difficile + $magie;
+
+        return [
+            'total'      => $total,
+            'facile'     => $facile,
+            'moyen'      => $moyen,
+            'difficile'  => $difficile,
+            'magie'      => $magie,
+            'bestStreak' => $bestStreak,
+        ];
+    } catch (PDOException $e) {
+        error_log('GetQuestStats error: ' . $e->getMessage());
+        return array_merge($default, ['bestStreak' => $bestStreak]);
     }
 }
 
@@ -1402,9 +1565,24 @@ function InsererStatistique(int $idJoueur, int $idQuestion, int $estReussi): boo
     $pdo = get_pdo();
     if ($pdo === false) return false;
     try {
+        // Ensure totalPlays column exists
+        static $colChecked = false;
+        if (!$colChecked) {
+            $exists = $pdo->query(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Joueurs'
+                 AND COLUMN_NAME = 'totalPlays'"
+            )->fetchColumn();
+            if (!$exists) {
+                $pdo->exec('ALTER TABLE Joueurs ADD COLUMN totalPlays INT UNSIGNED NOT NULL DEFAULT 0');
+            }
+            $colChecked = true;
+        }
+
         // ON DUPLICATE KEY accumulates successes so repeated plays (after flag reset) are counted
         $stmt = $pdo->prepare('INSERT INTO Statistique (idJoueur, idQuestion, estReussi) VALUES (:j, :q, :r) ON DUPLICATE KEY UPDATE estReussi = estReussi + VALUES(estReussi)');
         $stmt->execute([':j' => $idJoueur, ':q' => $idQuestion, ':r' => $estReussi]);
+
         return true;
     } catch (PDOException $e) {
         error_log('InsererStatistique error: ' . $e->getMessage());
@@ -1413,15 +1591,51 @@ function InsererStatistique(int $idJoueur, int $idQuestion, int $estReussi): boo
 }
 
 // -------------------------
+// Total enigmas in the game
+// -------------------------
+function GetTotalEnigmas(): int
+{
+    $pdo = get_pdo();
+    if (!$pdo) return 0;
+    try {
+        return (int) $pdo->query('SELECT COUNT(*) FROM Enigma')->fetchColumn();
+    } catch (PDOException $e) {
+        error_log('GetTotalEnigmas error: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+// -------------------------
 // Statistique: get player enigma stats
+// -------------------------
+// Leaderboard: top N players by MMR then rang
+// -------------------------
+function GetLeaderboard(int $limit = 12): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return [];
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT alias, COALESCE(rang,0) AS rang, COALESCE(lp,0) AS lp, COALESCE(mmr,0) AS mmr
+             FROM Joueurs
+             ORDER BY mmr DESC, rang DESC, lp DESC
+             LIMIT :lim'
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log('GetLeaderboard error: ' . $e->getMessage());
+        return [];
+    }
+}
+
 // -------------------------
 function GetEnigmaStats(int $idJoueur): array
 {
     $pdo = get_pdo();
-    if ($pdo === false) return ['total' => 0, 'reussies' => 0, 'ratees' => 0, 'taux' => 0];
+    if ($pdo === false) return ['total' => 0, 'reussies' => 0, 'ratees' => 0, 'taux' => 0, 'totalPlays' => 0];
     try {
-        // reussies = questions answered correctly at least once (estReussi > 0)
-        // ratees   = questions never answered correctly (estReussi = 0)
         $stmt = $pdo->prepare('SELECT COUNT(*) AS total, SUM(estReussi > 0) AS reussies FROM Statistique WHERE idJoueur = :j');
         $stmt->execute([':j' => $idJoueur]);
         $row      = $stmt->fetch();
@@ -1429,33 +1643,95 @@ function GetEnigmaStats(int $idJoueur): array
         $reussies = (int) ($row['reussies'] ?? 0);
         $ratees   = $total - $reussies;
         $taux     = $total > 0 ? (int) round($reussies / $total * 100) : 0;
-        return compact('total', 'reussies', 'ratees', 'taux');
+
+        // Career play count (includes replays of the same question)
+        $totalPlays = 0;
+        try {
+            $s2 = $pdo->prepare('SELECT COALESCE(totalPlays, 0) FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+            $s2->execute([':id' => $idJoueur]);
+            $totalPlays = (int) $s2->fetchColumn();
+        } catch (PDOException $e) { /* column may not exist yet */ }
+
+        return compact('total', 'reussies', 'ratees', 'taux', 'totalPlays');
     } catch (PDOException $e) {
         error_log('GetEnigmaStats error: ' . $e->getMessage());
-        return ['total' => 0, 'reussies' => 0, 'ratees' => 0, 'taux' => 0];
+        return ['total' => 0, 'reussies' => 0, 'ratees' => 0, 'taux' => 0, 'totalPlays' => 0];
     }
 }
 
-// -------------------------
-// Ranked system helpers
-// Requires: ALTER TABLE Joueurs ADD COLUMN rang TINYINT UNSIGNED NOT NULL DEFAULT 0,
-//                                ADD COLUMN lp SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-//                                ADD COLUMN mmr INT UNSIGNED NOT NULL DEFAULT 1000;
-// -------------------------
 function getRankName(int $rang): string
 {
-    return ['Novice', 'Bronze', 'Argent', 'Or', 'Platine', 'Diamant', 'Légende'][$rang] ?? 'Légende';
+    // 0→14: low→high, drawing from R6, Valorant, LoL, Rocket League, CS2
+    return [
+        'Fer',           // 0  – Iron           (Valorant / LoL)        — absolute bottom
+        'Cuivre',        // 1  – Copper         (Rainbow Six Siege)     — low
+        'Bronze',        // 2  – Bronze         (all games)             — low
+        'Argent',        // 3  – Silver         (all games)             — low-mid
+        'Or',            // 4  – Gold           (all games)             — mid
+        'Platine',       // 5  – Platinum       (Valorant / LoL / R6)   — mid
+        'Émeraude',      // 6  – Emerald        (LoL)                   — mid-high
+        'Diamant',       // 7  – Diamond        (all games)             — high
+        'Champion',      // 8  – Champion       (R6 / Rocket League)    — high
+        'Maître',        // 9  – Master         (LoL / Valorant)        — high
+        'Grand Maître',  // 10 – Grandmaster    (LoL / R6 Champion)     — elite
+        'Grand Champion',// 11 – Grand Champion (Rocket League)         — elite
+        'Ascendant',     // 12 – Ascendant      (Valorant)              — near-top
+        'Immortel',      // 13 – Immortal       (Valorant)              — near-top
+        'Radiant',       // 14 – Radiant/Chall. (Valorant / LoL)        — absolute top
+    ][$rang] ?? 'Radiant';
 }
 
 function getRankColor(int $rang): string
 {
-    return ['#888888', '#cd7f32', '#c0c0c0', '#ffd700', '#00e5cc', '#00bfff', '#ff6b35'][$rang] ?? '#ff6b35';
+    return [
+        '#7f8c8d', // Fer           – dull iron grey
+        '#a0694a', // Cuivre        – copper brown
+        '#cd7f32', // Bronze        – bronze
+        '#bdc3c7', // Argent        – silver
+        '#f1c40f', // Or            – gold
+        '#4ecdc4', // Platine       – teal
+        '#2ecc71', // Émeraude      – emerald green
+        '#00bfff', // Diamant       – icy blue
+        '#e67e22', // Champion      – warm orange (R6 champion vibe)
+        '#9b59b6', // Maître        – purple
+        '#d35400', // Grand Maître  – deep orange
+        '#e74c3c', // Grand Champion– fiery red (RL Grand Champ)
+        '#ff85c8', // Ascendant     – Valorant pink
+        '#c0392b', // Immortel      – deep crimson
+        '#ffe066', // Radiant       – bright gold/white-gold
+    ][$rang] ?? '#ffe066';
+}
+
+function _ensureRankedColumns(PDO $pdo): void
+{
+    try {
+        $existing = $pdo->query(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Joueurs'
+             AND COLUMN_NAME IN ('rang','lp','mmr')"
+        )->fetchAll(PDO::FETCH_COLUMN);
+
+        $missing = array_diff(['rang', 'lp', 'mmr'], $existing);
+        if (empty($missing)) return;
+
+        $defs = [
+            'rang' => 'TINYINT UNSIGNED NOT NULL DEFAULT 0',
+            'lp'   => 'SMALLINT UNSIGNED NOT NULL DEFAULT 0',
+            'mmr'  => 'INT UNSIGNED NOT NULL DEFAULT 1000',
+        ];
+        foreach ($missing as $col) {
+            $pdo->exec("ALTER TABLE Joueurs ADD COLUMN $col {$defs[$col]}");
+        }
+    } catch (PDOException $e) {
+        error_log('_ensureRankedColumns error: ' . $e->getMessage());
+    }
 }
 
 function GetRankedData(int $idJoueur): array
 {
     $pdo = get_pdo();
     if (!$pdo) return ['rang' => 0, 'lp' => 0, 'mmr' => 1000];
+    _ensureRankedColumns($pdo);
     try {
         $s = $pdo->prepare('SELECT rang, lp, mmr FROM Joueurs WHERE idJoueur = :id LIMIT 1');
         $s->execute([':id' => $idJoueur]);
@@ -1471,63 +1747,197 @@ function GetRankedData(int $idJoueur): array
     }
 }
 
-// Process a ranked result after answering an enigma.
-// winStreak / lossStreak come from the session.
-// LP gain formula targets ~20 correct answers per rank (base 5 LP/correct).
-// Streak shortens that; losses push it out. MMR nudges ±LP slightly.
-function ProcessRanked(int $idJoueur, bool $correct, int $winStreak, int $lossStreak): array
+// LP/MMR per difficulty — harder = more LP per correct answer.
+// ~50 F correct = rank up | ~25 M | ~15 D | ~10 G
+// At max rank (Radiant) LP is frozen at 100; only MMR keeps climbing.
+function _rankedDiffStats(string $categorie): array
+{
+    return match(strtoupper($categorie)) {
+        'M'     => ['lpGain' => 4,  'lpLoss' => 3, 'mmrGain' => 7,  'mmrLoss' => 5],
+        'D'     => ['lpGain' => 7,  'lpLoss' => 4, 'mmrGain' => 11, 'mmrLoss' => 7],
+        'G'     => ['lpGain' => 10, 'lpLoss' => 5, 'mmrGain' => 15, 'mmrLoss' => 10],
+        default => ['lpGain' => 2,  'lpLoss' => 2, 'mmrGain' => 4,  'mmrLoss' => 3],
+    };
+}
+
+function ProcessRanked(int $idJoueur, bool $correct, string $categorie, int $winStreak, int $lossStreak): array
 {
     $pdo = get_pdo();
     if (!$pdo) return [];
+    _ensureRankedColumns($pdo);
     try {
-        $pdo->beginTransaction();
-        $s = $pdo->prepare('SELECT rang, lp, mmr FROM Joueurs WHERE idJoueur = :id FOR UPDATE');
+        $s = $pdo->prepare('SELECT rang, lp, mmr FROM Joueurs WHERE idJoueur = :id LIMIT 1');
         $s->execute([':id' => $idJoueur]);
         $row  = $s->fetch();
         $rang = (int)($row['rang'] ?? 0);
         $lp   = (int)($row['lp']   ?? 0);
         $mmr  = (int)($row['mmr']  ?? 1000);
 
-        $mmrFactor = ($mmr - 1000) / 200;
+        $diff = _rankedDiffStats($categorie);
+
+        $isMaxRank = ($rang >= 14);
 
         if ($correct) {
-            $lpChange = (int) round(max(3, min(25, 5 + floor($winStreak / 2) + $mmrFactor)));
-            $mmr      = min(3000, $mmr + 15);
+            $streakBonus = min(3, (int) floor($winStreak / 5));
+            $lpChange    = $diff['lpGain'] + $streakBonus;
+            $mmrChange   = $diff['mmrGain'];
+            $mmr         = min(99999, $mmr + $mmrChange);
         } else {
-            $penalty  = max(0, -$mmrFactor);
-            $lpChange = -(int) round(max(3, min(20, 5 + floor($lossStreak / 2) + $penalty)));
-            $mmr      = max(500, $mmr - 10);
+            $lpChange  = -$diff['lpLoss'];
+            $mmrChange = -$diff['mmrLoss'];
+            $mmr       = max(500, $mmr + $mmrChange);
         }
-
-        $lp += $lpChange;
 
         $rankChange = null;
-        if ($lp >= 100 && $rang < 6) {
-            $rang++;
-            $lp = 0;
-            $rankChange = 'up';
-        } elseif ($lp >= 100) {
-            $lp = 99;
-        }
 
-        if ($lp < 0) {
-            if ($rang > 0) {
-                $rang--;
-                $lp = 75;
-                $rankChange = 'down';
-            } else {
+        if ($isMaxRank) {
+            // At max rank LP is locked at 100 — only MMR matters
+            $lp      = 100;
+            $lpChange = 0;
+        } else {
+            $lp += $lpChange;
+
+            if ($lp >= 100) {
+                $rang++;
                 $lp = 0;
+                $rankChange = 'up';
+            }
+
+            if ($lp < 0) {
+                if ($rang > 0) {
+                    $rang--;
+                    $lp = 75;
+                    $rankChange = 'down';
+                } else {
+                    $lp = 0;
+                }
             }
         }
 
-        $u = $pdo->prepare('UPDATE Joueurs SET rang = :rang, lp = :lp, mmr = :mmr WHERE idJoueur = :id');
-        $u->execute([':rang' => $rang, ':lp' => $lp, ':mmr' => $mmr, ':id' => $idJoueur]);
-        $pdo->commit();
+        $pdo->prepare('UPDATE Joueurs SET rang = :rang, lp = :lp, mmr = :mmr WHERE idJoueur = :id')
+            ->execute([':rang' => $rang, ':lp' => $lp, ':mmr' => $mmr, ':id' => $idJoueur]);
 
-        return compact('rang', 'lp', 'mmr', 'lpChange', 'rankChange');
+        return compact('rang', 'lp', 'mmr', 'lpChange', 'mmrChange', 'rankChange');
     } catch (PDOException $e) {
-        $pdo->rollBack();
         error_log('ProcessRanked error: ' . $e->getMessage());
         return [];
+    }
+}
+
+// -------------------------
+// Admin: all items (quantity + price)
+// -------------------------
+function GetAllItemsForAdmin(): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return [];
+    try {
+        return $pdo->query(
+            'SELECT idItem, nom, quantite, prix, typeItem FROM Items ORDER BY typeItem, nom'
+        )->fetchAll();
+    } catch (PDOException $e) {
+        error_log('GetAllItemsForAdmin: ' . $e->getMessage());
+        return [];
+    }
+}
+
+function UpdateItemShop(int $idItem, int $quantite, int $prix): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur BD.'];
+    try {
+        $pdo->prepare('UPDATE Items SET quantite = :q, prix = :p WHERE idItem = :id')
+            ->execute([':q' => $quantite, ':p' => $prix, ':id' => $idItem]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('UpdateItemShop: ' . $e->getMessage());
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
+// -------------------------
+// Admin: sort types (heal editing)
+// -------------------------
+function GetSortTypesForAdmin(): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return [];
+    try {
+        return $pdo->query(
+            'SELECT ts.typeSorts, ts.Description, ts.ptVie, COUNT(s.idItem) AS nbItems
+             FROM TypeSorts ts
+             LEFT JOIN Sorts s ON s.typeSorts = ts.typeSorts
+             GROUP BY ts.typeSorts, ts.Description, ts.ptVie
+             ORDER BY ts.typeSorts'
+        )->fetchAll();
+    } catch (PDOException $e) {
+        error_log('GetSortTypesForAdmin: ' . $e->getMessage());
+        return [];
+    }
+}
+
+function UpdateSortHeal(string $typeSorts, int $ptVie): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur BD.'];
+    try {
+        $pdo->prepare('UPDATE TypeSorts SET ptVie = :v WHERE typeSorts = :t')
+            ->execute([':v' => $ptVie, ':t' => $typeSorts]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('UpdateSortHeal: ' . $e->getMessage());
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
+// -------------------------
+// Admin: potions (heal % editing) — auto-migrates healPct column
+// -------------------------
+function _ensurePotionHealPct(PDO $pdo): void
+{
+    static $done = false;
+    if ($done) return;
+    $exists = $pdo->query(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Potions' AND COLUMN_NAME = 'healPct'"
+    )->fetchColumn();
+    if (!$exists) {
+        $pdo->exec('ALTER TABLE Potions ADD COLUMN healPct INT UNSIGNED NOT NULL DEFAULT 0');
+        $init = $pdo->prepare('UPDATE Potions SET healPct = :h WHERE idItem = :id');
+        foreach ($pdo->query('SELECT idItem, effet FROM Potions')->fetchAll() as $row) {
+            $init->execute([':h' => getPotionHealPct((string)$row['effet']), ':id' => $row['idItem']]);
+        }
+    }
+    $done = true;
+}
+
+function GetPotionsForAdmin(): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return [];
+    try {
+        _ensurePotionHealPct($pdo);
+        return $pdo->query(
+            'SELECT p.idItem, i.nom, p.effet, COALESCE(NULLIF(p.healPct,0), 15) AS healPct
+             FROM Potions p JOIN Items i ON i.idItem = p.idItem ORDER BY i.nom'
+        )->fetchAll();
+    } catch (PDOException $e) {
+        error_log('GetPotionsForAdmin: ' . $e->getMessage());
+        return [];
+    }
+}
+
+function UpdatePotionHeal(int $idItem, int $healPct): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur BD.'];
+    try {
+        _ensurePotionHealPct($pdo);
+        $pdo->prepare('UPDATE Potions SET healPct = :h WHERE idItem = :id')
+            ->execute([':h' => $healPct, ':id' => $idItem]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('UpdatePotionHeal: ' . $e->getMessage());
+        return ['success' => false, 'message' => $e->getMessage()];
     }
 }

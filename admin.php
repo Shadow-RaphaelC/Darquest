@@ -9,6 +9,7 @@ if (empty($_SESSION['is_admin'])) {
 
 $adminFeedback = null;
 
+// ── Add enigma ────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_enigma') {
     $enigme      = trim($_POST['enigme']      ?? '');
     $difficulte  = trim($_POST['difficulte']  ?? '');
@@ -16,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_e
     $reponses    = $_POST['reponse']          ?? [];
     $bonneRep    = (int) ($_POST['bonneReponse'] ?? 0);
 
-    $typeEnigme = ($_POST['type_enigme'] ?? '') === 'vrai_faux' ? 'vrai_faux' : 'choix_multiple';
+    $typeEnigme    = ($_POST['type_enigme'] ?? '') === 'vrai_faux' ? 'vrai_faux' : 'choix_multiple';
     $expectedCount = $typeEnigme === 'vrai_faux' ? 2 : 4;
 
     $validDiff  = in_array($difficulte,  ['F', 'M', 'D'], true);
@@ -33,7 +34,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_e
             : ['type' => 'error',   'message' => $result['message']];
     }
 
-    header('Location: admin.php');
+    header('Location: admin.php#enigmes');
+    exit;
+}
+
+// ── Update item (quantity + price) ────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_item') {
+    $idItem   = (int) ($_POST['idItem']   ?? 0);
+    $quantite = max(0, (int) ($_POST['quantite'] ?? 0));
+    $prix     = max(0, (int) ($_POST['prix']     ?? 0));
+    if ($idItem > 0) {
+        $result = UpdateItemShop($idItem, $quantite, $prix);
+        $_SESSION['admin_feedback'] = $result['success']
+            ? ['type' => 'success', 'message' => 'Item mis à jour.']
+            : ['type' => 'error',   'message' => $result['message']];
+    }
+    header('Location: admin.php#magasin');
+    exit;
+}
+
+// ── Update sort heal ──────────────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_sort_heal') {
+    $typeSorts = trim($_POST['typeSorts'] ?? '');
+    $ptVie     = max(0, (int) ($_POST['ptVie'] ?? 0));
+    if ($typeSorts !== '') {
+        $result = UpdateSortHeal($typeSorts, $ptVie);
+        $_SESSION['admin_feedback'] = $result['success']
+            ? ['type' => 'success', 'message' => 'Soin du sort mis à jour.']
+            : ['type' => 'error',   'message' => $result['message']];
+    }
+    header('Location: admin.php#sorts');
+    exit;
+}
+
+// ── Update potion heal ────────────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_potion_heal') {
+    $idItem  = (int) ($_POST['idItem']  ?? 0);
+    $healPct = max(0, min(100, (int) ($_POST['healPct'] ?? 0)));
+    if ($idItem > 0) {
+        $result = UpdatePotionHeal($idItem, $healPct);
+        $_SESSION['admin_feedback'] = $result['success']
+            ? ['type' => 'success', 'message' => 'Soin de la potion mis à jour.']
+            : ['type' => 'error',   'message' => $result['message']];
+    }
+    header('Location: admin.php#potions');
     exit;
 }
 
@@ -41,8 +85,23 @@ if (!empty($_SESSION['admin_feedback'])) {
     $adminFeedback = $_SESSION['admin_feedback'];
     unset($_SESSION['admin_feedback']);
 }
-?>
 
+// ── Fetch data for display ────────────────────────────────────────────────────
+$allItems   = GetAllItemsForAdmin();
+$sortTypes  = GetSortTypesForAdmin();
+$potions    = GetPotionsForAdmin();
+
+function adminTypeLabel(string $code): string {
+    $c = strtoupper(trim($code));
+    return match(true) {
+        $c === 'A' || $c === 'ARME'   => 'Arme',
+        $c === 'R' || $c === 'ARMURE' => 'Armure',
+        $c === 'P' || $c === 'POTION' => 'Potion',
+        $c === 'S' || $c === 'SORT'   => 'Sort',
+        default                        => ucfirst(strtolower($code)),
+    };
+}
+?>
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -51,31 +110,171 @@ if (!empty($_SESSION['admin_feedback'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/styles_dark.css">
     <title>DarQuest Admin</title>
+    <style>
+        .admin-table { width:100%; border-collapse:collapse; font-size:0.9em; margin-top:10px; }
+        .admin-table th { text-align:left; padding:7px 10px; border-bottom:2px solid #333; color:#aaa; font-weight:600; }
+        .admin-table td { padding:6px 10px; border-bottom:1px solid #222; vertical-align:middle; }
+        .admin-table tr:hover td { background:rgba(255,255,255,0.03); }
+        .admin-num-input { width:80px; background:#1a1a1a; border:1px solid #444; color:#fff; padding:4px 7px; border-radius:4px; text-align:center; }
+        .admin-num-input:focus { outline:none; border-color:#888; }
+        .admin-save-btn { padding:4px 12px; background:#2a5c2a; border:1px solid #4a9c4a; color:#adfaad; border-radius:4px; cursor:pointer; font-size:0.85em; }
+        .admin-save-btn:hover { background:#356835; }
+        .admin-section { margin-bottom:40px; scroll-margin-top:80px; }
+        .admin-tag { display:inline-block; padding:2px 7px; border-radius:3px; font-size:0.78em; font-weight:600; }
+        .tag-arme    { background:#3a2a0a; color:#f0a040; }
+        .tag-armure  { background:#0a2a3a; color:#40a0f0; }
+        .tag-potion  { background:#2a0a3a; color:#c080f0; }
+        .tag-sort    { background:#0a3a2a; color:#40f0a0; }
+    </style>
 </head>
 
 <body>
     <?php require 'include/header.php'; ?>
     <main>
         <h1>Panneau d'administration</h1>
-        <div class="admin-section">
-            <h2>Ajouter une Énigme</h2>
 
-            <?php if ($adminFeedback): ?>
-                <p class="auth-error-banner" <?= $adminFeedback['type'] === 'success' ? 'style="background:rgba(43,143,43,0.25);border-color:rgba(100,220,100,0.5);color:#adfaad;"' : '' ?>>
-                    <?= htmlspecialchars($adminFeedback['message']) ?>
-                </p>
+        <?php if ($adminFeedback): ?>
+            <p class="auth-error-banner" <?= $adminFeedback['type'] === 'success' ? 'style="background:rgba(43,143,43,0.25);border-color:rgba(100,220,100,0.5);color:#adfaad;"' : '' ?>>
+                <?= htmlspecialchars($adminFeedback['message']) ?>
+            </p>
+        <?php endif; ?>
+
+        <!-- ── Magasin: stock & prix ──────────────────────────────────────── -->
+        <div class="admin-section" id="magasin">
+            <h2>Magasin — Stock &amp; Prix</h2>
+            <?php if (empty($allItems)): ?>
+                <p style="color:#aaa;">Aucun item trouvé.</p>
+            <?php else: ?>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Nom</th>
+                        <th>Type</th>
+                        <th>Quantité</th>
+                        <th>Prix (gold)</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($allItems as $item):
+                    $label = adminTypeLabel((string)($item['typeItem'] ?? ''));
+                    $tagClass = 'tag-' . strtolower($label);
+                ?>
+                    <tr>
+                        <td style="color:#555;"><?= (int)$item['idItem'] ?></td>
+                        <td><?= htmlspecialchars($item['nom'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><span class="admin-tag <?= htmlspecialchars($tagClass) ?>"><?= htmlspecialchars($label) ?></span></td>
+                        <td>
+                            <form method="POST" action="admin.php" style="display:contents;">
+                                <input type="hidden" name="action" value="update_item">
+                                <input type="hidden" name="idItem" value="<?= (int)$item['idItem'] ?>">
+                                <input type="number" name="quantite" class="admin-num-input" value="<?= (int)$item['quantite'] ?>" min="0" max="9999">
+                        </td>
+                        <td>
+                                <input type="number" name="prix" class="admin-num-input" value="<?= (int)$item['prix'] ?>" min="0" max="999999">
+                        </td>
+                        <td>
+                                <button type="submit" class="admin-save-btn">Sauvegarder</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
             <?php endif; ?>
+        </div>
+
+        <!-- ── Sorts: soin ───────────────────────────────────────────────── -->
+        <div class="admin-section" id="sorts">
+            <h2>Sorts — HP soignés</h2>
+            <p style="color:#aaa; font-size:0.85em; margin-bottom:6px;">Modifier le soin s'applique à tous les sorts de ce type.</p>
+            <?php if (empty($sortTypes)): ?>
+                <p style="color:#aaa;">Aucun type de sort trouvé.</p>
+            <?php else: ?>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Items</th>
+                        <th>HP soignés</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($sortTypes as $st): ?>
+                    <tr>
+                        <td style="color:#555;"><?= htmlspecialchars($st['typeSorts'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td><?= htmlspecialchars($st['Description'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td style="color:#aaa; text-align:center;"><?= (int)$st['nbItems'] ?></td>
+                        <td>
+                            <form method="POST" action="admin.php" style="display:contents;">
+                                <input type="hidden" name="action" value="update_sort_heal">
+                                <input type="hidden" name="typeSorts" value="<?= htmlspecialchars($st['typeSorts'], ENT_QUOTES, 'UTF-8') ?>">
+                                <input type="number" name="ptVie" class="admin-num-input" value="<?= (int)$st['ptVie'] ?>" min="0" max="9999">
+                        </td>
+                        <td>
+                                <button type="submit" class="admin-save-btn">Sauvegarder</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <!-- ── Potions: soin ──────────────────────────────────────────────── -->
+        <div class="admin-section" id="potions">
+            <h2>Potions — % de soins</h2>
+            <p style="color:#aaa; font-size:0.85em; margin-bottom:6px;">Pourcentage des HP max restaurés à l'utilisation (0–100).</p>
+            <?php if (empty($potions)): ?>
+                <p style="color:#aaa;">Aucune potion trouvée.</p>
+            <?php else: ?>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Effet</th>
+                        <th>% soins</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($potions as $pot): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($pot['nom'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td style="color:#aaa; font-size:0.85em;"><?= htmlspecialchars($pot['effet'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td>
+                            <form method="POST" action="admin.php" style="display:contents;">
+                                <input type="hidden" name="action" value="update_potion_heal">
+                                <input type="hidden" name="idItem" value="<?= (int)$pot['idItem'] ?>">
+                                <input type="number" name="healPct" class="admin-num-input" style="width:65px;" value="<?= (int)$pot['healPct'] ?>" min="0" max="100"> %
+                        </td>
+                        <td>
+                                <button type="submit" class="admin-save-btn">Sauvegarder</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <!-- ── Ajouter une énigme ─────────────────────────────────────────── -->
+        <div class="admin-section" id="enigmes">
+            <h2>Ajouter une Énigme</h2>
 
             <form class="admin-form" action="admin.php" method="POST">
                 <input type="hidden" name="action" value="add_enigma">
 
-                <!-- Énigme -->
                 <div class="admin-form-field">
                     <label for="enigme">Texte de l'énigme</label>
                     <textarea id="enigme" name="enigme" maxlength="300" rows="4" placeholder="Entrez l'énigme..." required></textarea>
                 </div>
 
-                <!-- Difficulté + Catégorie -->
                 <div class="admin-form-row">
                     <div class="admin-form-field">
                         <label for="difficulte">Difficulté</label>
@@ -99,7 +298,6 @@ if (!empty($_SESSION['admin_feedback'])) {
                     </div>
                 </div>
 
-                <!-- Réponses -->
                 <input type="hidden" name="type_enigme" id="type_enigme" value="choix_multiple">
 
                 <fieldset class="admin-responses">
@@ -140,6 +338,7 @@ if (!empty($_SESSION['admin_feedback'])) {
                 <p id="adminFormError" class="auth-error-banner" style="display:none;margin-top:12px;"></p>
             </form>
         </div>
+
     </main>
     <?php require 'include/footer.php'; ?>
 
@@ -159,10 +358,8 @@ if (!empty($_SESSION['admin_feedback'])) {
             typeInput.value = 'choix_multiple';
             btnChoix.classList.add('active');
             btnVraiFaux.classList.remove('active');
-
             row3.style.display = '';
             row4.style.display = '';
-
             [rep1, rep2, rep3, rep4].forEach(function (r) {
                 r.readOnly = false;
                 r.required = true;
@@ -175,64 +372,39 @@ if (!empty($_SESSION['admin_feedback'])) {
             typeInput.value = 'vrai_faux';
             btnVraiFaux.classList.add('active');
             btnChoix.classList.remove('active');
-
             row3.style.display = 'none';
             row4.style.display = 'none';
-
-            // Lock rows 3 & 4 out of submission
             rep3.required = false;
             rep3.removeAttribute('name');
             rep4.required = false;
             rep4.removeAttribute('name');
-
-            rep1.value    = 'Vrai';
-            rep1.readOnly = true;
-            rep1.required = true;
-            rep2.value    = 'Faux';
-            rep2.readOnly = true;
-            rep2.required = true;
-
-            // Reset correct-answer radio to row 1 if rows 3/4 were checked
+            rep1.value = 'Vrai'; rep1.readOnly = true; rep1.required = true;
+            rep2.value = 'Faux'; rep2.readOnly = true; rep2.required = true;
             const checked = document.querySelector('input[name="bonneReponse"]:checked');
             if (checked && (checked.value === '3' || checked.value === '4')) {
                 document.getElementById('correct_1').checked = true;
             }
         }
 
-        btnChoix.addEventListener('click', setChoixMultiples);
-        btnVraiFaux.addEventListener('click', setVraiFaux);
-
-        // Restore names if switching back to choix multiples
         btnChoix.addEventListener('click', function () {
             rep3.name = 'reponse[3]';
             rep4.name = 'reponse[4]';
+            setChoixMultiples();
         });
+        btnVraiFaux.addEventListener('click', setVraiFaux);
 
-        // ── Validation on submit ──────────────────────────────────────────
-        document.querySelector('.admin-form').addEventListener('submit', function (e) {
+        document.querySelector('#enigmes .admin-form').addEventListener('submit', function (e) {
             const errorBox = document.getElementById('adminFormError');
             const errors   = [];
             const isVraiFaux = typeInput.value === 'vrai_faux';
-
             const enigme = document.getElementById('enigme').value;
-            if (enigme.length > 300) {
-                errors.push('Le texte de l\'énigme dépasse 300 caractères (' + enigme.length + '/300).');
-            }
-
+            if (enigme.length > 300) errors.push('Le texte dépasse 300 caractères (' + enigme.length + '/300).');
             const activeReps = isVraiFaux ? [rep1, rep2] : [rep1, rep2, rep3, rep4];
             activeReps.forEach(function (input, idx) {
-                if (input.value.trim() === '') {
-                    errors.push('La réponse ' + (idx + 1) + ' est vide.');
-                } else if (input.value.length > 45) {
-                    errors.push('La réponse ' + (idx + 1) + ' dépasse 45 caractères (' + input.value.length + '/45).');
-                }
+                if (input.value.trim() === '') errors.push('La réponse ' + (idx + 1) + ' est vide.');
+                else if (input.value.length > 45) errors.push('La réponse ' + (idx + 1) + ' dépasse 45 caractères.');
             });
-
-            const bonneReponse = document.querySelector('input[name="bonneReponse"]:checked');
-            if (!bonneReponse) {
-                errors.push('Veuillez cocher la bonne réponse.');
-            }
-
+            if (!document.querySelector('input[name="bonneReponse"]:checked')) errors.push('Veuillez cocher la bonne réponse.');
             if (errors.length > 0) {
                 e.preventDefault();
                 errorBox.innerHTML = errors.join('<br>');

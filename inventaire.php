@@ -90,6 +90,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'use')
             'newMaxHP' => (int) ($_SESSION['maxHP'] ?? 100),
             'newPV' => (int) ($_SESSION['pointDeVie'] ?? 0),
         ]));
+    } elseif ($typeCode === 'S' || $typeCode === 'SORT') {
+        $result = UtiliserSort($userId, $idItem);
+        if ($result['success']) {
+            $_SESSION['pointDeVie'] = $result['newPV'];
+            $_SESSION['maxHP'] = $result['maxHP'];
+        }
+        echo json_encode(array_merge($result, [
+            'itemType' => 'sort',
+            'newMaxHP' => (int) ($_SESSION['maxHP'] ?? 100),
+            'newPV' => (int) ($_SESSION['pointDeVie'] ?? 0),
+        ]));
     } else {
         echo json_encode(['success' => false, 'message' => 'Cet item n\'est pas encore utilisable.']);
     }
@@ -314,6 +325,21 @@ if (isset($_SESSION['inv_flash'])) {
                                         <?php endif; ?>
                                     </p>
                                 <?php endif; ?>
+                                <?php if (($typeCode === 'S' || $typeCode === 'SORT') && !empty($item['sortPtVie'])): ?>
+                                    <?php
+                                    $sortBase = (int) $item['sortPtVie'];
+                                    $sortReal = (int) round($sortBase * (1 + $playerHealBonus / 100));
+                                    $sortReal = max(1, $sortReal);
+                                    ?>
+                                    <p class="armor-stats">
+                                        Restaure ~<?= $sortReal ?> HP
+                                        <?php if ($playerHealBonus !== 0): ?>
+                                            <span style="color:<?= $playerHealBonus > 0 ? '#adf3ad' : '#f3adad' ?>;">
+                                                (<?= $playerHealBonus > 0 ? '+' : '' ?><?= $playerHealBonus ?>% soin)
+                                            </span>
+                                        <?php endif; ?>
+                                    </p>
+                                <?php endif; ?>
                                 <p class="description">Quantité : <?= $qte ?></p>
                                 <p class="prixOr"><?= number_format($prix, 0, '', '') ?> gold</p>
                                 <p class="item-resell" style="color: <?= $resellColor ?>;">
@@ -420,6 +446,13 @@ if (isset($_SESSION['inv_flash'])) {
                             } else if (data.itemType === 'arme') {
                                 showFlash('Arme équipée !', 'success');
                             } else if (data.itemType === 'potion') {
+                                if (hpBar && hpText && data.newMaxHP > 0) {
+                                    const pct = Math.round(data.newPV / data.newMaxHP * 100);
+                                    hpBar.style.width = pct + '%';
+                                    hpText.textContent = 'PV: ' + data.newPV + '/' + data.newMaxHP;
+                                }
+                                showFlash('+' + data.healed + ' HP restaurés !', 'success');
+                            } else if (data.itemType === 'sort') {
                                 if (hpBar && hpText && data.newMaxHP > 0) {
                                     const pct = Math.round(data.newPV / data.newMaxHP * 100);
                                     hpBar.style.width = pct + '%';
