@@ -161,7 +161,7 @@ if ($currentPage === 'panier.php') {
             </form>
 
             <!-- Sign-up form -->
-            <form id="formSignup" class="auth-form" action="auth.php" method="POST"
+            <form id="formSignup" class="auth-form" action="#" method="POST"
                 style="<?= $authMode === 'signup' ? '' : 'display:none;' ?>">
                 <input type="hidden" name="mode" value="signup">
                 <div class="form-field">
@@ -196,6 +196,72 @@ if ($currentPage === 'panier.php') {
                     Pas encore de compte ? <button type="button" class="link-button" id="switchFormBtn">Inscription</button>
                 <?php endif; ?>
             </p>
+
+            <!-- Inscription – vérification du courriel -->
+            <div id="signupVerifyPanel" class="auth-form" style="display:none;">
+                <p style="font-size:0.9rem; color:#ccc; margin:0 0 14px;">
+                    Un code à 6 caractères a été envoyé à votre adresse courriel. Vérifiez aussi vos spams.
+                </p>
+                <div class="form-field">
+                    <label>Code de vérification</label>
+                    <input type="text" id="signupVerifyCode" maxlength="6" autocomplete="off"
+                           placeholder="XXXXXX" style="letter-spacing:4px; text-transform:uppercase; font-family:monospace;">
+                </div>
+                <div id="signupVerifyMsg" class="auth-error-banner" style="display:none;"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" id="signupVerifyBtn">Créer mon compte</button>
+                    <button type="button" class="link-button" id="signupVerifyBackBtn">Annuler</button>
+                </div>
+            </div>
+
+            <!-- Mot de passe oublié – étape 1 : saisie du courriel -->
+            <div id="forgotStep1Panel" class="auth-form" style="display:none;">
+                <div class="form-field">
+                    <label>Courriel associé au compte</label>
+                    <input type="email" id="forgotEmail" autocomplete="email">
+                </div>
+                <div id="forgotStep1Msg" class="auth-error-banner" style="display:none;"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" id="forgotSubmitBtn">Envoyer le code</button>
+                    <button type="button" class="link-button" id="backToSigninBtn">Retour</button>
+                </div>
+            </div>
+
+            <!-- Mot de passe oublié – étape 2 : saisie du code et nouveau mot de passe -->
+            <div id="forgotStep2Panel" class="auth-form" style="display:none;">
+                <p style="font-size:0.9rem; color:#ccc; margin:0 0 14px;">
+                    Un code à 6 caractères a été envoyé à votre adresse courriel. Vérifiez aussi vos spams.
+                </p>
+                <div class="form-field">
+                    <label>Entrez le code</label>
+                    <input type="text" id="forgotCodeInput" maxlength="6" autocomplete="off"
+                           placeholder="XXXXXX" style="letter-spacing:4px; text-transform:uppercase; font-family:monospace;">
+                </div>
+                <div class="form-field">
+                    <label>Nouveau mot de passe</label>
+                    <input type="password" id="forgotNewPw" autocomplete="new-password">
+                </div>
+                <div class="form-field">
+                    <label>Confirmer le mot de passe</label>
+                    <input type="password" id="forgotConfirmPw" autocomplete="new-password">
+                </div>
+                <div id="forgotStep2Msg" class="auth-error-banner" style="display:none;"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" id="forgotValidateBtn">Valider</button>
+                </div>
+            </div>
+
+            <!-- Mot de passe oublié – succès -->
+            <div id="forgotSuccessPanel" style="display:none; text-align:center;">
+                <div class="auth-error-banner"
+                     style="background:rgba(50,150,50,0.25); border-color:rgba(80,200,80,0.5); color:#adf3ad;">
+                    Mot de passe réinitialisé avec succès !
+                </div>
+                <div class="form-actions" style="margin-top:16px; justify-content:center;">
+                    <button type="button" class="btn-primary" id="backToSigninAfterResetBtn">Se connecter</button>
+                </div>
+            </div>
+
         </div>
     </div>
 <?php endif; ?>

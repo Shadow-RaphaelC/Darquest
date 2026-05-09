@@ -146,10 +146,10 @@ function GetItemsStockMap(): array
     return $map;
 }
 
-function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $isDisponible)
+function render_item_card($id, $nom, $quantity, $typeItem, $price, $image, $estDisponible)
 {
-    $isDisponibleNormalized = filter_var($isDisponible, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-    if ($isDisponibleNormalized === false) {
+    $estDisponibleNormalized = filter_var($estDisponible, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    if ($estDisponibleNormalized === false) {
         return;
     }
 
@@ -1939,5 +1939,131 @@ function UpdatePotionHeal(int $idItem, int $healPct): array
     } catch (PDOException $e) {
         error_log('UpdatePotionHeal: ' . $e->getMessage());
         return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
+// -------------------------
+// Admin: add new item (Items + subtype table, in a transaction)
+// -------------------------
+function AddItemToShop(string $nom, int $quantite, int $prix, string $typeItem, string $image, bool $estDisponible, array $sub): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur BD.'];
+    try {
+        $pdo->beginTransaction();
+
+        $pdo->prepare(
+            'INSERT INTO Items (nom, quantite, prix, typeItem, image, estDisponible)
+             VALUES (:nom, :q, :p, :type, :img, :disp)'
+        )->execute([
+            ':nom'  => $nom,
+            ':q'    => $quantite,
+            ':p'    => $prix,
+            ':type' => $typeItem,
+            ':img'  => $image,
+            ':disp' => $estDisponible ? 1 : 0,
+        ]);
+        $idItem = (int) $pdo->lastInsertId();
+
+        switch ($typeItem) {
+            case 'A':
+                $pdo->prepare('INSERT INTO Armes (idItem, efficacite, genre, description) VALUES (:id, :e, :g, :d)')
+                    ->execute([':id' => $idItem, ':e' => $sub['efficacite'], ':g' => $sub['genre'], ':d' => $sub['description']]);
+                break;
+            case 'R':
+                $pdo->prepare('INSERT INTO Armures (idItem, matiere, taille) VALUES (:id, :m, :t)')
+                    ->execute([':id' => $idItem, ':m' => $sub['matiere'], ':t' => $sub['taille']]);
+                break;
+            case 'P':
+                _ensurePotionHealPct($pdo);
+                $pdo->prepare('INSERT INTO Potions (idItem, effet, duree, healPct) VALUES (:id, :e, :d, :h)')
+                    ->execute([':id' => $idItem, ':e' => $sub['effet'], ':d' => (int)$sub['duree'], ':h' => (int)$sub['healPct']]);
+                break;
+            case 'S':
+                $pdo->prepare('INSERT INTO Sorts (idItem, typeSorts, rarete, estInstantane) VALUES (:id, :t, :r, :inst)')
+                    ->execute([':id' => $idItem, ':t' => $sub['typeSorts'], ':r' => (int)$sub['rarete'], ':inst' => $sub['estInstantane'] ? 1 : 0]);
+                break;
+        }
+
+        $pdo->commit();
+        return ['success' => true, 'idItem' => $idItem];
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log('AddItemToShop: ' . $e->getMessage());
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
+// -------------------------
+// Vérifier le mot de passe actuel + valider le nouveau (sans appliquer le changement)
+// -------------------------
+function ChangerMotDePasseVerify(int $idJoueur, string $motDePasseActuel, string $nouveauMDP): array
+{
+    if (strlen($nouveauMDP) < 6) {
+        return ['success' => false, 'message' => 'Le nouveau mot de passe doit contenir au moins 6 caractères.'];
+    }
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    try {
+        $stmt = $pdo->prepare('SELECT motDePasse FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+        if (!$row) return ['success' => false, 'message' => 'Joueur introuvable.'];
+        if (!password_verify($motDePasseActuel, $row['motDePasse'])) {
+            return ['success' => false, 'message' => 'Mot de passe actuel incorrect.'];
+        }
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('ChangerMotDePasseVerify error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur de vérification.'];
+    }
+}
+
+// -------------------------
+// Changer le mot de passe (utilisateur connecté, mot de passe actuel requis)
+// -------------------------
+function ChangerMotDePasse(int $idJoueur, string $motDePasseActuel, string $nouveauMDP): array
+{
+    if (strlen($nouveauMDP) < 6) {
+        return ['success' => false, 'message' => 'Le nouveau mot de passe doit contenir au moins 6 caractères.'];
+    }
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    try {
+        $stmt = $pdo->prepare('SELECT motDePasse FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+        if (!$row) return ['success' => false, 'message' => 'Joueur introuvable.'];
+        if (!password_verify($motDePasseActuel, $row['motDePasse'])) {
+            return ['success' => false, 'message' => 'Mot de passe actuel incorrect.'];
+        }
+        $hash = password_hash($nouveauMDP, PASSWORD_BCRYPT);
+        $pdo->prepare('UPDATE Joueurs SET motDePasse = :mdp WHERE idJoueur = :id')
+            ->execute([':mdp' => $hash, ':id' => $idJoueur]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('ChangerMotDePasse error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors du changement de mot de passe.'];
+    }
+}
+
+// -------------------------
+// Réinitialiser le mot de passe (flux mot de passe oublié, sans mot de passe actuel)
+// -------------------------
+function ResetMotDePasse(int $idJoueur, string $nouveauMDP): array
+{
+    if (strlen($nouveauMDP) < 6) {
+        return ['success' => false, 'message' => 'Le mot de passe doit contenir au moins 6 caractères.'];
+    }
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    try {
+        $hash = password_hash($nouveauMDP, PASSWORD_BCRYPT);
+        $pdo->prepare('UPDATE Joueurs SET motDePasse = :mdp WHERE idJoueur = :id')
+            ->execute([':mdp' => $hash, ':id' => $idJoueur]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('ResetMotDePasse error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de la réinitialisation.'];
     }
 }

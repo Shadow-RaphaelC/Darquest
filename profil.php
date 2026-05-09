@@ -33,6 +33,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
     echo json_encode($result);
     exit;
 }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'change_password') {
+    header('Content-Type: application/json');
+    if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+        echo json_encode(['success' => false, 'message' => 'Non connecté']);
+        exit;
+    }
+    $userId  = (int) $_SESSION['user_id'];
+    $actuel  = $_POST['current_password']  ?? '';
+    $nouveau = $_POST['new_password']      ?? '';
+    $confirm = $_POST['confirm_password']  ?? '';
+
+    if ($nouveau !== $confirm) {
+        echo json_encode(['success' => false, 'message' => 'Les mots de passe ne correspondent pas.']);
+        exit;
+    }
+
+    echo json_encode(ChangerMotDePasse($userId, $actuel, $nouveau));
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -87,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
             ?>
 
             <div class="profil-container">
+            <div class="profil-col">
 
                 <!-- Stats -->
                 <div class="profil-stat-box">
@@ -194,6 +215,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                     <?php endif; ?>
                 </div>
 
+            </div><!-- /profil-col left -->
+            <div class="profil-col">
+
                 <!-- Ranked -->
                 <div class="profil-stat-box" style="border-color:<?= $rkColor ?>;">
                     <h2 style="color:<?= $rkColor ?>;">&#9733; <?= htmlspecialchars($rkName) ?></h2>
@@ -272,7 +296,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
                     </div>
                 </div>
 
-            </div>
+                <!-- Change Password -->
+                <div class="profil-stat-box">
+                    <h2>Changer le mot de passe</h2>
+                    <div id="changePwMsg" class="profil-pw-msg" style="display:none;"></div>
+                    <div class="profil-pw-form">
+                        <div class="profil-pw-field">
+                            <label for="currentPw">Mot de passe actuel</label>
+                            <input type="password" id="currentPw" autocomplete="current-password">
+                        </div>
+                        <div class="profil-pw-field">
+                            <label for="newPw">Nouveau mot de passe</label>
+                            <input type="password" id="newPw" autocomplete="new-password">
+                        </div>
+                        <div class="profil-pw-field">
+                            <label for="confirmPw">Confirmer le nouveau mot de passe</label>
+                            <input type="password" id="confirmPw" autocomplete="new-password">
+                        </div>
+                        <button type="button" class="btn-primary" id="changePwBtn">Changer le mot de passe</button>
+                    </div>
+                </div>
+
+            </div><!-- /profil-col right -->
+            </div><!-- /profil-container -->
         <?php endif; ?>
     </main>
     <?php require 'include/footer.php'; ?>
@@ -313,6 +359,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
         });
 
         unequipAction('unequipArmeBtn', 'unequip_arme', null);
+
+        // Password change (single step: current + new + confirm)
+        (function () {
+            const btn = document.getElementById('changePwBtn');
+            if (!btn) return;
+            const msg = document.getElementById('changePwMsg');
+            function showMsg(text, ok) {
+                msg.textContent = text;
+                msg.className = 'profil-pw-msg ' + (ok ? 'profil-pw-msg--ok' : 'profil-pw-msg--err');
+                msg.style.display = '';
+            }
+            btn.addEventListener('click', function () {
+                const current = document.getElementById('currentPw').value;
+                const newPw   = document.getElementById('newPw').value;
+                const confirm = document.getElementById('confirmPw').value;
+                if (!current || !newPw || !confirm) { showMsg('Veuillez remplir tous les champs.', false); return; }
+                btn.disabled = true;
+                const fd = new FormData();
+                fd.append('action',           'change_password');
+                fd.append('current_password', current);
+                fd.append('new_password',     newPw);
+                fd.append('confirm_password', confirm);
+                fetch('profil.php', { method: 'POST', body: fd })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        btn.disabled = false;
+                        if (data.success) {
+                            showMsg('Mot de passe changé avec succès !', true);
+                            document.getElementById('currentPw').value = '';
+                            document.getElementById('newPw').value     = '';
+                            document.getElementById('confirmPw').value = '';
+                        } else {
+                            showMsg(data.message || 'Erreur inconnue.', false);
+                        }
+                    })
+                    .catch(function () { showMsg('Erreur réseau.', false); btn.disabled = false; });
+            });
+        })();
     </script>
 </body>
 
