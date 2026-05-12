@@ -9,6 +9,58 @@ if (empty($_SESSION['is_admin'])) {
 
 $adminFeedback = null;
 
+// ── Accept demande or (AJAX) ──────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'accepter_demande') {
+    header('Content-Type: application/json');
+    $idDemande = (int)($_POST['idDemande'] ?? 0);
+    $idJoueur  = (int)($_POST['idJoueur']  ?? 0);
+    if ($idDemande <= 0 || $idJoueur <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Paramètres invalides.']);
+        exit;
+    }
+    echo json_encode(AccepterDemandeOr($idDemande, $idJoueur));
+    exit;
+}
+
+// ── Refuse demande or (AJAX) ──────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'refuser_demande') {
+    header('Content-Type: application/json');
+    $idDemande = (int)($_POST['idDemande'] ?? 0);
+    if ($idDemande <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Paramètre invalide.']);
+        exit;
+    }
+    echo json_encode(RefuserDemandeOr($idDemande));
+    exit;
+}
+
+// ── Get player inventory (AJAX) ───────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'get_player_inventory') {
+    header('Content-Type: application/json');
+    $alias = trim($_POST['alias'] ?? '');
+    if ($alias === '') {
+        echo json_encode(['success' => false, 'message' => 'Alias manquant.']);
+        exit;
+    }
+    $idJoueur = GetJoueurIdByAlias($alias);
+    if (!$idJoueur) {
+        echo json_encode(['success' => false, 'message' => 'Joueur introuvable.']);
+        exit;
+    }
+    $items   = AfficherInventaire($idJoueur);
+    $hp      = GetJoueurHP($idJoueur);
+    $coins   = GetJoueurCoins($idJoueur);
+    echo json_encode([
+        'success' => true,
+        'alias'   => $alias,
+        'items'   => $items,
+        'pv'      => (int)$hp['pointDeVie'],
+        'maxHP'   => (int)$hp['maxHP'],
+        'gold'    => (int)$coins['gold'],
+    ]);
+    exit;
+}
+
 // ── Add enigma ────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_enigma') {
     $enigme      = trim($_POST['enigme']      ?? '');
@@ -142,9 +194,10 @@ if (!empty($_SESSION['admin_feedback'])) {
 }
 
 // ── Fetch data for display ────────────────────────────────────────────────────
-$allItems   = GetAllItemsForAdmin();
-$sortTypes  = GetSortTypesForAdmin();
-$potions    = GetPotionsForAdmin();
+$allItems        = GetAllItemsForAdmin();
+$sortTypes       = GetSortTypesForAdmin();
+$potions         = GetPotionsForAdmin();
+$pendingDemandes = GetDemandesOrEnAttente();
 
 function adminTypeLabel(string $code): string {
     $c = strtoupper(trim($code));
@@ -155,6 +208,13 @@ function adminTypeLabel(string $code): string {
         $c === 'S' || $c === 'SORT'   => 'Sort',
         default                        => ucfirst(strtolower($code)),
     };
+}
+
+function demandeRewardLabel(int $nb): string {
+    return match($nb) { 0 => '+10 or', 1 => '+10 argent', 2 => '+10 bronze', default => 'Épuisé' };
+}
+function demandeRewardColor(int $nb): string {
+    return match($nb) { 0 => '#d4af6f', 1 => '#b8b8b8', 2 => '#cd7f32', default => '#888' };
 }
 ?>
 <!DOCTYPE html>
@@ -209,6 +269,10 @@ function adminTypeLabel(string $code): string {
             <button class="admin-tab-btn" data-tab="potions">Potions</button>
             <button class="admin-tab-btn" data-tab="enigmes">Ajouter une énigme</button>
             <button class="admin-tab-btn" data-tab="add-item">Ajouter un item</button>
+            <button class="admin-tab-btn" data-tab="inventaire-joueur">Inventaire joueur</button>
+            <button class="admin-tab-btn" data-tab="demandes-or">
+                Demandes d'or<?php if (count($pendingDemandes) > 0): ?><span class="admin-badge"><?= count($pendingDemandes) ?></span><?php endif; ?>
+            </button>
         </div>
         <div class="admin-content">
 
@@ -563,6 +627,62 @@ function adminTypeLabel(string $code): string {
                 <p id="addItemError" class="auth-error-banner" style="display:none; margin-top:12px;"></p>
             </form>
         </div>
+        <!-- ── Demandes d'or ─────────────────────────────────────────────── -->
+        <div class="admin-panel admin-section" id="demandes-or">
+            <h2>Demandes d'or</h2>
+            <?php if (empty($pendingDemandes)): ?>
+                <p style="color:#aaa;">Aucune demande en attente.</p>
+            <?php else: ?>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Joueur</th>
+                        <th>Recevrait</th>
+                        <th>Demandes utilisées</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="demandesOrBody">
+                <?php foreach ($pendingDemandes as $d):
+                    $nb = (int)$d['nbDemandesAdmin'];
+                ?>
+                    <tr id="demande-row-<?= (int)$d['idDemande'] ?>">
+                        <td><?= htmlspecialchars($d['alias'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td style="color:<?= demandeRewardColor($nb) ?>; font-weight:600;"><?= demandeRewardLabel($nb) ?></td>
+                        <td style="text-align:center; color:#aaa;"><?= $nb ?> / 3</td>
+                        <td style="color:#aaa; font-size:0.83em;"><?= htmlspecialchars($d['dateDemande'], ENT_QUOTES, 'UTF-8') ?></td>
+                        <td>
+                            <div style="display:flex; gap:8px;">
+                                <button class="admin-save-btn"
+                                    onclick="accepterDemande(<?= (int)$d['idDemande'] ?>, <?= (int)$d['idJoueur'] ?>, this)">
+                                    Accepter
+                                </button>
+                                <button class="admin-refuse-btn"
+                                    onclick="refuserDemande(<?= (int)$d['idDemande'] ?>, this)">
+                                    Refuser
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <!-- ── Inventaire d'un joueur ──────────────────────────────────── -->
+        <div class="admin-panel admin-section" id="inventaire-joueur">
+            <h2>Inventaire d'un joueur</h2>
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:18px;">
+                <input type="text" id="invSearchAlias" class="admin-num-input"
+                    style="width:220px; text-align:left; padding:6px 10px;"
+                    placeholder="Alias du joueur">
+                <button class="admin-save-btn" id="invSearchBtn" style="padding:6px 18px;">Rechercher</button>
+            </div>
+            <div id="invResult"></div>
+        </div>
+
         </div><!-- /admin-content -->
         </div><!-- /admin-layout -->
 
@@ -659,6 +779,135 @@ function adminTypeLabel(string $code): string {
             }
         });
     })();
+
+    // ── Demandes d'or ─────────────────────────────────────────────────────────
+    function accepterDemande(idDemande, idJoueur, btn) {
+        btn.disabled = true;
+        const fd = new FormData();
+        fd.append('action', 'accepter_demande');
+        fd.append('idDemande', idDemande);
+        fd.append('idJoueur', idJoueur);
+        fetch('admin.php', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    document.getElementById('demande-row-' + idDemande)?.remove();
+                    syncDemandesBadge();
+                } else {
+                    btn.disabled = false;
+                    alert(data.message || 'Erreur.');
+                }
+            })
+            .catch(function () { btn.disabled = false; alert('Erreur réseau.'); });
+    }
+
+    function refuserDemande(idDemande, btn) {
+        btn.disabled = true;
+        const fd = new FormData();
+        fd.append('action', 'refuser_demande');
+        fd.append('idDemande', idDemande);
+        fetch('admin.php', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    document.getElementById('demande-row-' + idDemande)?.remove();
+                    syncDemandesBadge();
+                } else {
+                    btn.disabled = false;
+                    alert(data.message || 'Erreur.');
+                }
+            })
+            .catch(function () { btn.disabled = false; alert('Erreur réseau.'); });
+    }
+
+    function syncDemandesBadge() {
+        const tbody = document.getElementById('demandesOrBody');
+        const tabBtn = document.querySelector('[data-tab="demandes-or"]');
+        const badge = tabBtn?.querySelector('.admin-badge');
+        const remaining = tbody ? tbody.querySelectorAll('tr').length : 0;
+        if (badge) {
+            if (remaining > 0) badge.textContent = remaining;
+            else badge.remove();
+        }
+        if (remaining === 0) {
+            const panel = document.getElementById('demandes-or');
+            if (panel) {
+                const h2 = panel.querySelector('h2');
+                panel.innerHTML = '';
+                if (h2) panel.appendChild(h2);
+                const p = document.createElement('p');
+                p.style.color = '#aaa';
+                p.textContent = 'Aucune demande en attente.';
+                panel.appendChild(p);
+            }
+        }
+    }
+
+    // ── Player inventory lookup ───────────────────────────────────────────────
+    function adminEscapeHtml(text) {
+        const d = document.createElement('div');
+        d.appendChild(document.createTextNode(String(text)));
+        return d.innerHTML;
+    }
+
+    function invTypeLabel(code) {
+        code = (code || '').toUpperCase().trim();
+        if (code === 'A' || code === 'ARME')   return 'Arme';
+        if (code === 'R' || code === 'ARMURE') return 'Armure';
+        if (code === 'P' || code === 'POTION') return 'Potion';
+        if (code === 'S' || code === 'SORT')   return 'Sort';
+        return code || 'Autre';
+    }
+
+    function searchPlayerInventory() {
+        const alias  = document.getElementById('invSearchAlias').value.trim();
+        const result = document.getElementById('invResult');
+        if (!alias) { result.innerHTML = '<p style="color:#e07070;">Entrez un alias.</p>'; return; }
+        result.innerHTML = '<p style="color:#aaa;">Chargement...</p>';
+        const fd = new FormData();
+        fd.append('action', 'get_player_inventory');
+        fd.append('alias', alias);
+        fetch('admin.php', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    result.innerHTML = '<p style="color:#e07070;">' + adminEscapeHtml(data.message) + '</p>';
+                    return;
+                }
+                if (!data.items || data.items.length === 0) {
+                    result.innerHTML = '<p style="color:#aaa;">L\'inventaire de <strong>' + adminEscapeHtml(data.alias) + '</strong> est vide.</p>';
+                    return;
+                }
+                let html = '<div style="margin-bottom:14px; font-size:0.92em; color:#aaa;">'
+                    + '<strong style="color:#fff; font-size:1em;">' + adminEscapeHtml(data.alias) + '</strong>'
+                    + ' &nbsp;|&nbsp; PV : <span style="color:#adf3ad;">' + data.pv + ' / ' + data.maxHP + '</span>'
+                    + ' &nbsp;|&nbsp; Gold : <span style="color:#d4af6f;">' + data.gold + '</span>'
+                    + ' &nbsp;|&nbsp; ' + data.items.length + ' type(s) d\'item'
+                    + '</div>';
+                html += '<table class="admin-table"><thead><tr>'
+                    + '<th></th><th>Nom</th><th>Type</th><th>Qté</th><th>Prix (gold)</th>'
+                    + '</tr></thead><tbody>';
+                data.items.forEach(function (item) {
+                    const tl = invTypeLabel(item.typeItem);
+                    const tc = 'tag-' + tl.toLowerCase();
+                    html += '<tr>'
+                        + '<td style="width:40px;"><img src="' + adminEscapeHtml(item.image || '') + '" style="height:30px; object-fit:contain;" alt=""></td>'
+                        + '<td>' + adminEscapeHtml(item.nom || '') + '</td>'
+                        + '<td><span class="admin-tag ' + tc + '">' + tl + '</span></td>'
+                        + '<td style="text-align:center;">' + (parseInt(item.quantiteInvenatire) || 0) + '</td>'
+                        + '<td style="color:#d4af6f;">' + (parseInt(item.prix) || 0) + '</td>'
+                        + '</tr>';
+                });
+                html += '</tbody></table>';
+                result.innerHTML = html;
+            })
+            .catch(function () { result.innerHTML = '<p style="color:#e07070;">Erreur réseau.</p>'; });
+    }
+
+    document.getElementById('invSearchBtn').addEventListener('click', searchPlayerInventory);
+    document.getElementById('invSearchAlias').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') searchPlayerInventory();
+    });
 
     // ── Admin tabs ────────────────────────────────────────────────────────────
     (function () {

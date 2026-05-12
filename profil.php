@@ -34,6 +34,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unequ
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'demande_or') {
+    header('Content-Type: application/json');
+    if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+        echo json_encode(['success' => false, 'message' => 'Non connecté']);
+        exit;
+    }
+    echo json_encode(SoumettreDemandeOr((int)$_SESSION['user_id']));
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'change_password') {
     header('Content-Type: application/json');
     if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -87,6 +97,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
             $ranked        = GetRankedData($userId);
             $rkColor       = getRankColor($ranked['rang']);
             $rkName        = getRankName($ranked['rang']);
+
+            // Demande d'or statut
+            $statutDemande   = GetStatutDemandeOr($userId);
+            $nbDemandesUsees = $statutDemande['nbDemandes'];
+            $demandeEnAttente = $statutDemande['enAttente'];
 
             // Fetch bonuses from DB
             $healBonus = 0;
@@ -212,6 +227,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
                     <?php else: ?>
                         <p class="profil-no-armor">Aucune arme équipée.</p>
                         <p><a class="btnAutre" href="inventaire.php" style="font-size:0.95rem;">Voir l'inventaire</a></p>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Demande d'or -->
+                <?php
+                $rewardLabels = ['+10 or', '+10 argent', '+10 bronze'];
+                $rewardColors = ['#d4af6f', '#b8b8b8', '#cd7f32'];
+                ?>
+                <div class="profil-stat-box">
+                    <h2>Demande d'or</h2>
+                    <div class="profil-stat-row" style="margin-bottom:10px;">
+                        <span class="profil-stat-label">Demandes utilisées</span>
+                        <span class="profil-stat-value"><?= $nbDemandesUsees ?> / 3</span>
+                    </div>
+                    <?php if ($nbDemandesUsees >= 3): ?>
+                        <p style="color:#888; font-size:0.88rem;">Vous avez utilisé toutes vos demandes disponibles.</p>
+                    <?php elseif ($demandeEnAttente): ?>
+                        <p class="demande-pending-msg">Demande en attente de validation par un administrateur...</p>
+                    <?php else: ?>
+                        <div class="profil-stat-row" style="margin-bottom:14px;">
+                            <span class="profil-stat-label">Récompense si acceptée</span>
+                            <span class="profil-stat-value" style="color:<?= $rewardColors[$nbDemandesUsees] ?>; font-weight:600;">
+                                <?= $rewardLabels[$nbDemandesUsees] ?>
+                            </span>
+                        </div>
+                        <button type="button" class="btn-primary" id="demandeOrBtn" style="width:100%;">Envoyer une demande</button>
+                        <p id="demandeOrMsg" style="font-size:0.85rem; margin-top:8px; display:none;"></p>
                     <?php endif; ?>
                 </div>
 
@@ -395,6 +437,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
                         }
                     })
                     .catch(function () { showMsg('Erreur réseau.', false); btn.disabled = false; });
+            });
+        })();
+
+        // Demande d'or
+        (function () {
+            const btn = document.getElementById('demandeOrBtn');
+            if (!btn) return;
+            const msg = document.getElementById('demandeOrMsg');
+            btn.addEventListener('click', function () {
+                btn.disabled = true;
+                const fd = new FormData();
+                fd.append('action', 'demande_or');
+                fetch('profil.php', { method: 'POST', body: fd })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        msg.style.display = '';
+                        if (data.success) {
+                            msg.style.color = '#adf3ad';
+                            msg.textContent = 'Demande envoyée ! En attente de validation.';
+                            btn.style.display = 'none';
+                        } else {
+                            msg.style.color = '#e07070';
+                            msg.textContent = data.message || 'Erreur inconnue.';
+                            btn.disabled = false;
+                        }
+                    })
+                    .catch(function () {
+                        msg.style.display = '';
+                        msg.style.color = '#e07070';
+                        msg.textContent = 'Erreur réseau.';
+                        btn.disabled = false;
+                    });
             });
         })();
     </script>

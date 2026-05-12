@@ -2067,3 +2067,219 @@ function ResetMotDePasse(int $idJoueur, string $nouveauMDP): array
         return ['success' => false, 'message' => 'Erreur lors de la réinitialisation.'];
     }
 }
+
+// -------------------------
+// Demandes d'or
+// -------------------------
+
+function GetStatutDemandeOr(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['nbDemandes' => 0, 'enAttente' => false];
+    try {
+        $stmt = $pdo->prepare('SELECT nbDemandesAdmin FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+        $nb = (int)($row['nbDemandesAdmin'] ?? 0);
+
+        $stmt2 = $pdo->prepare('SELECT COUNT(*) AS cnt FROM DemandesOr WHERE idJoueur = :id');
+        $stmt2->execute([':id' => $idJoueur]);
+        $enAttente = (int)$stmt2->fetch()['cnt'] > 0;
+
+        return ['nbDemandes' => $nb, 'enAttente' => $enAttente];
+    } catch (PDOException $e) {
+        error_log('GetStatutDemandeOr error: ' . $e->getMessage());
+        return ['nbDemandes' => 0, 'enAttente' => false];
+    }
+}
+
+function SoumettreDemandeOr(int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    try {
+        $stmt = $pdo->prepare('SELECT nbDemandesAdmin FROM Joueurs WHERE idJoueur = :id LIMIT 1');
+        $stmt->execute([':id' => $idJoueur]);
+        $row = $stmt->fetch();
+        if (!$row) return ['success' => false, 'message' => 'Joueur introuvable.'];
+        if ((int)$row['nbDemandesAdmin'] >= 3) {
+            return ['success' => false, 'message' => 'Vous avez utilisé toutes vos demandes.'];
+        }
+        $pdo->prepare('INSERT INTO DemandesOr (idJoueur) VALUES (:id)')
+            ->execute([':id' => $idJoueur]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        if ((int)$e->getCode() === 23000) {
+            return ['success' => false, 'message' => 'Une demande est déjà en attente.'];
+        }
+        error_log('SoumettreDemandeOr error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de l\'envoi.'];
+    }
+}
+
+function GetDemandesOrEnAttente(): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return [];
+    try {
+        $stmt = $pdo->query(
+            'SELECT d.idDemande, d.idJoueur, d.dateDemande, j.alias, j.nbDemandesAdmin
+             FROM DemandesOr d
+             JOIN Joueurs j ON j.idJoueur = d.idJoueur
+             ORDER BY d.dateDemande ASC'
+        );
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log('GetDemandesOrEnAttente error: ' . $e->getMessage());
+        return [];
+    }
+}
+
+function AccepterDemandeOr(int $idDemande, int $idJoueur): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    try {
+        // SP reads these columns into local vars then does arithmetic (e.g. playerGold + 10).
+        // NULL + 10 = NULL in MySQL, so any NULL column would silently stay NULL.
+        $pdo->prepare(
+            'UPDATE Joueurs SET
+                nbDemandesAdmin = COALESCE(nbDemandesAdmin, 0),
+                gold            = COALESCE(gold,            0),
+                argent          = COALESCE(argent,          0),
+                bronze          = COALESCE(bronze,          0)
+             WHERE idJoueur = :id'
+        )->execute([':id' => $idJoueur]);
+
+        $stmt = $pdo->prepare('CALL DemandeAdmin(:id)');
+        $stmt->execute([':id' => $idJoueur]);
+        while ($stmt->nextRowset()) {}
+
+        $pdo->prepare('DELETE FROM DemandesOr WHERE idDemande = :id')
+            ->execute([':id' => $idDemande]);
+
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('AccepterDemandeOr error: ' . $e->getMessage());
+        $info = $e->errorInfo ?? [];
+        return ['success' => false, 'message' => $info[2] ?? $e->getMessage()];
+    }
+}
+
+function RefuserDemandeOr(int $idDemande): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    try {
+        $pdo->prepare('DELETE FROM DemandesOr WHERE idDemande = :id')
+            ->execute([':id' => $idDemande]);
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('RefuserDemandeOr error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors du refus.'];
+    }
+}
+
+// -------------------------
+// Trouver un joueur par alias
+// -------------------------
+function GetJoueurIdByAlias(string $alias): ?int
+{
+    $pdo = get_pdo();
+    if (!$pdo) return null;
+    try {
+        $stmt = $pdo->prepare('SELECT idJoueur FROM Joueurs WHERE alias = :alias LIMIT 1');
+        $stmt->execute([':alias' => $alias]);
+        $row = $stmt->fetch();
+        return $row ? (int)$row['idJoueur'] : null;
+    } catch (PDOException $e) {
+        error_log('GetJoueurIdByAlias error: ' . $e->getMessage());
+        return null;
+    }
+}
+
+// -------------------------
+// Commentaires
+// -------------------------
+
+function GetCommentairesItem(int $idItem): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) throw new RuntimeException('Erreur de connexion BD.');
+    $stmt = $pdo->prepare(
+        'SELECT c.idCommentaires AS idCommentaire, c.commentaire, c.evaluation, c.idJoueur, j.alias
+         FROM Commentaires c
+         JOIN Joueurs j ON j.idJoueur = c.idJoueur
+         WHERE c.idItem = :idItem
+         ORDER BY c.idCommentaires DESC'
+    );
+    $stmt->execute([':idItem' => $idItem]);
+    return $stmt->fetchAll();
+}
+
+function GetAllItemsCommentStats(): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return [];
+    try {
+        $stmt = $pdo->query(
+            'SELECT idItem, COUNT(*) AS total, AVG(evaluation) AS moyenne
+             FROM Commentaires
+             GROUP BY idItem'
+        );
+        $stats = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $stats[(int)$row['idItem']] = [
+                'total'   => (int)$row['total'],
+                'moyenne' => round((float)$row['moyenne'], 1),
+            ];
+        }
+        return $stats;
+    } catch (PDOException $e) {
+        error_log('GetAllItemsCommentStats error: ' . $e->getMessage());
+        return [];
+    }
+}
+
+function AjouterCommentaireItem(string $commentaire, int $evaluation, string $alias, int $idItem): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    try {
+        $stmt = $pdo->prepare('CALL AjouterCommentaire(:commentaire, :evaluation, :alias, :idItem)');
+        $stmt->execute([
+            ':commentaire' => $commentaire,
+            ':evaluation'  => $evaluation,
+            ':alias'       => $alias,
+            ':idItem'      => $idItem,
+        ]);
+        while ($stmt->nextRowset()) {}
+        $pdo->exec('COMMIT');
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('AjouterCommentaireItem error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de l\'ajout du commentaire.'];
+    }
+}
+
+function SupprimerCommentaireItem(int $idCommentaires, int $idJoueur, bool $isAdmin): array
+{
+    $pdo = get_pdo();
+    if (!$pdo) return ['success' => false, 'message' => 'Erreur de connexion BD.'];
+    try {
+        if ($isAdmin) {
+            $stmt = $pdo->prepare('DELETE FROM Commentaires WHERE idCommentaires = :id');
+            $stmt->execute([':id' => $idCommentaires]);
+        } else {
+            $stmt = $pdo->prepare('DELETE FROM Commentaires WHERE idCommentaires = :id AND idJoueur = :joueur');
+            $stmt->execute([':id' => $idCommentaires, ':joueur' => $idJoueur]);
+        }
+        if ($stmt->rowCount() === 0) {
+            return ['success' => false, 'message' => 'Commentaire introuvable ou accès refusé.'];
+        }
+        return ['success' => true];
+    } catch (PDOException $e) {
+        error_log('SupprimerCommentaireItem error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Erreur lors de la suppression.'];
+    }
+}

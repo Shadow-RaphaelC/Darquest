@@ -259,6 +259,7 @@ if (isset($_SESSION['inv_flash'])) {
 
                         // Potion sub-stats
                         $potionHealPct = null;
+                        $healForButton = 0;
                         if (($typeCode === 'P' || $typeCode === 'POTION') && !empty($item['effet'])) {
                             $potionHealPct = getPotionHealPct($item['effet']);
                         }
@@ -312,6 +313,7 @@ if (isset($_SESSION['inv_flash'])) {
                                     $baseHeal = (int) round($playerMaxHP * $potionHealPct / 100);
                                     $realHeal = (int) round($baseHeal * (1 + $playerHealBonus / 100));
                                     $realHeal = max(1, $realHeal);
+                                    $healForButton = $realHeal;
                                     ?>
                                     <p class="armor-stats">
                                         <?= htmlspecialchars(ucfirst(strtolower($item['effet']))) ?>
@@ -330,6 +332,7 @@ if (isset($_SESSION['inv_flash'])) {
                                     $sortBase = (int) $item['sortPtVie'];
                                     $sortReal = (int) round($sortBase * (1 + $playerHealBonus / 100));
                                     $sortReal = max(1, $sortReal);
+                                    $healForButton = $sortReal;
                                     ?>
                                     <p class="armor-stats">
                                         Restaure ~<?= $sortReal ?> HP
@@ -348,7 +351,10 @@ if (isset($_SESSION['inv_flash'])) {
                                 </p>
                             </div>
                             <?php if ($isUsable): ?>
-                                <button type="button" class="btn-utiliser use-btn" data-id="<?= $idItem ?>" <?= $isEquipped ? 'disabled title="Déjà équipée"' : '' ?>>
+                                <button type="button" class="btn-utiliser use-btn"
+                                    data-id="<?= $idItem ?>"
+                                    <?= $healForButton > 0 ? 'data-heal="' . $healForButton . '"' : '' ?>
+                                    <?= $isEquipped ? 'disabled title="Déjà équipée"' : '' ?>>
                                     <?= in_array($typeCode, ['R', 'ARMURE', 'A', 'ARME']) ? 'Équiper' : 'Utiliser' ?>
                                 </button>
                             <?php endif; ?>
@@ -375,8 +381,23 @@ if (isset($_SESSION['inv_flash'])) {
             <?php endif; ?>
         <?php endif; ?>
     </main>
+
+    <!-- Confirm overflow-heal modal -->
+    <div id="confirmUseOverlay" class="modal-overlay" aria-hidden="true">
+        <div class="modal confirm-use-modal">
+            <p class="confirm-use-icon">⚠</p>
+            <p id="confirmUseMsg" class="confirm-use-msg"></p>
+            <div class="confirm-use-btns">
+                <button id="confirmUseCancel" class="btn-cancel-confirm">Annuler</button>
+                <button id="confirmUseOk" class="btn-ok-confirm">Utiliser quand même</button>
+            </div>
+        </div>
+    </div>
+
     <?php require 'include/footer.php'; ?>
     <script>
+        const playerPV     = <?= (int)$playerPV ?>;
+        const playerMaxHP  = <?= (int)$playerMaxHP ?>;
         // +/- quantity controls
         document.querySelectorAll('.sell-qty-control').forEach(function (ctrl) {
             const input = ctrl.querySelector('.qty-input');
@@ -421,57 +442,84 @@ if (isset($_SESSION['inv_flash'])) {
         });
 
         // Use / Equip button
+        let confirmUseCallback = null;
+
+        document.getElementById('confirmUseOk').addEventListener('click', function () {
+            document.getElementById('confirmUseOverlay').classList.remove('visible');
+            document.getElementById('confirmUseOverlay').setAttribute('aria-hidden', 'true');
+            if (confirmUseCallback) { confirmUseCallback(); confirmUseCallback = null; }
+        });
+        document.getElementById('confirmUseCancel').addEventListener('click', function () {
+            document.getElementById('confirmUseOverlay').classList.remove('visible');
+            document.getElementById('confirmUseOverlay').setAttribute('aria-hidden', 'true');
+            confirmUseCallback = null;
+        });
+
+        function doUseItem(btn) {
+            const idItem = btn.dataset.id;
+            const fd = new FormData();
+            fd.append('action', 'use');
+            fd.append('idItem', idItem);
+            btn.disabled = true;
+            fetch('inventaire.php', { method: 'POST', body: fd })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        const hpBar = document.querySelector('.hpBar');
+                        const hpText = document.querySelector('.hpText');
+                        if (data.itemType === 'armure') {
+                            if (hpBar && hpText && data.newMaxHP > 0) {
+                                const pct = Math.round(data.newPV / data.newMaxHP * 100);
+                                hpBar.style.width = pct + '%';
+                                hpText.textContent = 'PV: ' + data.newPV + '/' + data.newMaxHP;
+                            }
+                            showFlash('Armure équipée !', 'success');
+                        } else if (data.itemType === 'arme') {
+                            showFlash('Arme équipée !', 'success');
+                        } else if (data.itemType === 'potion') {
+                            if (hpBar && hpText && data.newMaxHP > 0) {
+                                const pct = Math.round(data.newPV / data.newMaxHP * 100);
+                                hpBar.style.width = pct + '%';
+                                hpText.textContent = 'PV: ' + data.newPV + '/' + data.newMaxHP;
+                            }
+                            showFlash('+' + data.healed + ' HP restaurés !', 'success');
+                        } else if (data.itemType === 'sort') {
+                            if (hpBar && hpText && data.newMaxHP > 0) {
+                                const pct = Math.round(data.newPV / data.newMaxHP * 100);
+                                hpBar.style.width = pct + '%';
+                                hpText.textContent = 'PV: ' + data.newPV + '/' + data.newMaxHP;
+                            }
+                            showFlash('+' + data.healed + ' HP restaurés !', 'success');
+                        } else {
+                            showFlash('Utilisé !', 'success');
+                        }
+                        setTimeout(function () { saveFilterState(); location.reload(); }, 1400);
+                    } else {
+                        btn.disabled = false;
+                        showFlash(data.message || 'Erreur inconnue', 'error');
+                    }
+                })
+                .catch(function () {
+                    btn.disabled = false;
+                    showFlash('Erreur réseau', 'error');
+                });
+        }
+
         document.querySelectorAll('.use-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                const idItem = btn.dataset.id;
-                const fd = new FormData();
-                fd.append('action', 'use');
-                fd.append('idItem', idItem);
-
-                btn.disabled = true;
-
-                fetch('inventaire.php', { method: 'POST', body: fd })
-                    .then(function (res) { return res.json(); })
-                    .then(function (data) {
-                        if (data.success) {
-                            const hpBar = document.querySelector('.hpBar');
-                            const hpText = document.querySelector('.hpText');
-                            if (data.itemType === 'armure') {
-                                if (hpBar && hpText && data.newMaxHP > 0) {
-                                    const pct = Math.round(data.newPV / data.newMaxHP * 100);
-                                    hpBar.style.width = pct + '%';
-                                    hpText.textContent = 'PV: ' + data.newPV + '/' + data.newMaxHP;
-                                }
-                                showFlash('Armure équipée !', 'success');
-                            } else if (data.itemType === 'arme') {
-                                showFlash('Arme équipée !', 'success');
-                            } else if (data.itemType === 'potion') {
-                                if (hpBar && hpText && data.newMaxHP > 0) {
-                                    const pct = Math.round(data.newPV / data.newMaxHP * 100);
-                                    hpBar.style.width = pct + '%';
-                                    hpText.textContent = 'PV: ' + data.newPV + '/' + data.newMaxHP;
-                                }
-                                showFlash('+' + data.healed + ' HP restaurés !', 'success');
-                            } else if (data.itemType === 'sort') {
-                                if (hpBar && hpText && data.newMaxHP > 0) {
-                                    const pct = Math.round(data.newPV / data.newMaxHP * 100);
-                                    hpBar.style.width = pct + '%';
-                                    hpText.textContent = 'PV: ' + data.newPV + '/' + data.newMaxHP;
-                                }
-                                showFlash('+' + data.healed + ' HP restaurés !', 'success');
-                            } else {
-                                showFlash('Utilisé !', 'success');
-                            }
-                            setTimeout(function () { saveFilterState(); location.reload(); }, 1400);
-                        } else {
-                            btn.disabled = false;
-                            showFlash(data.message || 'Erreur inconnue', 'error');
-                        }
-                    })
-                    .catch(function () {
-                        btn.disabled = false;
-                        showFlash('Erreur réseau', 'error');
-                    });
+                const heal = parseInt(btn.dataset.heal || '0');
+                if (heal > 0 && playerPV + heal > playerMaxHP) {
+                    const missed = playerPV + heal - playerMaxHP;
+                    document.getElementById('confirmUseMsg').textContent =
+                        'Vous avez ' + playerPV + '/' + playerMaxHP + ' PV. Cet item restaure ~' + heal +
+                        ' HP, mais vous ne pouvez en absorber que ' + (playerMaxHP - playerPV) +
+                        '. Vous passerez à côté de ' + missed + ' HP de soin. Voulez-vous quand même l\'utiliser ?';
+                    confirmUseCallback = function () { doUseItem(btn); };
+                    document.getElementById('confirmUseOverlay').classList.add('visible');
+                    document.getElementById('confirmUseOverlay').setAttribute('aria-hidden', 'false');
+                } else {
+                    doUseItem(btn);
+                }
             });
         });
 

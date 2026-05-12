@@ -54,6 +54,7 @@ require_once 'BD/bd.php';
             $products = AfficherItems();
             if (!is_array($products))
                 $products = [];
+            $commentStats = GetAllItemsCommentStats();
 
             foreach ($products as $p):
                 $id = $p[0] ?? null;
@@ -106,6 +107,13 @@ require_once 'BD/bd.php';
                         <p class="item-type">Type : <?= htmlspecialchars($typeLabel) ?></p>
                         <p class="description">Quantité : <?= $quantity ?></p>
                         <p class="prixOr"><?= number_format($price, 0, '', '') ?> gold</p>
+                        <?php $cs = $commentStats[$id] ?? null; if ($cs && $cs['total'] > 0): ?>
+                        <p class="item-rating">
+                            <span class="item-rating-stars"><?= str_repeat('★', (int)round($cs['moyenne'])) . str_repeat('☆', 5 - (int)round($cs['moyenne'])) ?></span>
+                            <span class="item-rating-pct"><?= round(($cs['moyenne'] / 5) * 100) ?>%</span>
+                            <span class="item-rating-count">(<?= $cs['total'] ?> avis)</span>
+                        </p>
+                        <?php endif; ?>
                         <div class="btnPanier">
                             <?php if ($quantity > 0): ?>
                                 <?php if (!$isLogged): ?>
@@ -150,6 +158,13 @@ require_once 'BD/bd.php';
                 <p id="modalPrix" class="prixOr"></p>
                 <div id="modalDetails"></div>
                 <div id="modalBtn" class="btnPanier" style="margin-top:16px;"></div>
+                <hr class="modal-divider">
+                <div id="modalComments" class="modal-comments">
+                    <p class="comment-section-title">Avis des joueurs</p>
+                    <div id="commentStats" class="comment-stats-area"></div>
+                    <div id="commentList" class="comment-list-area"></div>
+                    <div id="commentForm" class="comment-form-area"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -192,6 +207,9 @@ require_once 'BD/bd.php';
             echo 'userIsMage = ' . ((int)$mageStatus['estMage'] === 1 ? 'true' : 'false') . ';';
         }
         ?>
+        const isAdmin = <?= !empty($_SESSION['is_admin']) ? 'true' : 'false' ?>;
+        const userAlias = <?= json_encode($_SESSION['username'] ?? '') ?>;
+        let currentModalItemId = 0;
 
         // ---- CART BADGE ----
         function incrementCartBadge() {
@@ -347,9 +365,156 @@ require_once 'BD/bd.php';
                 btnDiv.innerHTML = `<span class="btnPanierImg--disabled">Rupture de stock</span>`;
             }
 
+            loadComments(id);
             itemOverlay.classList.add('visible');
             itemOverlay.setAttribute('aria-hidden', 'false');
             document.body.classList.add('blurred');
+        }
+
+        // ---- COMMENTS ----
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.appendChild(document.createTextNode(String(text)));
+            return d.innerHTML;
+        }
+
+        function renderStars(value) {
+            let html = '<span class="stars-display">';
+            for (let i = 1; i <= 5; i++) {
+                html += `<span class="star-icon${i <= Math.round(value) ? ' filled' : ''}">★</span>`;
+            }
+            return html + '</span>';
+        }
+
+        function renderCommentStats(comments) {
+            if (!comments || comments.length === 0) {
+                return '<p class="no-comments-msg">Aucune évaluation pour cet item.</p>';
+            }
+            const total = comments.length;
+            const avg = comments.reduce((s, c) => s + parseInt(c.evaluation), 0) / total;
+            const pct = Math.round((avg / 5) * 100);
+            return `<div class="comment-stats"><span class="comment-count">${total} avis</span>${renderStars(avg)}<span class="comment-avg">${avg.toFixed(1)}/5 &mdash; ${pct}%</span></div>`;
+        }
+
+        function renderCommentForm(idItem) {
+            if (!isLoggedIn) {
+                return '<p class="comment-login-msg">Connectez-vous pour laisser un avis.</p>';
+            }
+            return `<div class="add-comment-form">
+                <p class="comment-form-title">Laisser un avis</p>
+                <div id="starPicker" class="star-picker" onmouseleave="resetStarHover()">
+                    ${[1,2,3,4,5].map(i => `<span class="star-pick" data-value="${i}" onclick="pickStar(${i})" onmouseover="hoverStar(${i})">★</span>`).join('')}
+                </div>
+                <input type="hidden" id="selectedRating" value="0">
+                <textarea id="commentInput" class="comment-textarea" placeholder="Votre commentaire (max 200 caractères)" maxlength="200"></textarea>
+                <button class="btn-submit-comment" onclick="submitComment(${idItem})">Publier</button>
+                <p id="commentFormMsg" class="comment-form-msg"></p>
+            </div>`;
+        }
+
+        function hoverStar(value) {
+            document.querySelectorAll('#starPicker .star-pick').forEach(s => {
+                s.style.color = parseInt(s.dataset.value) <= value ? '#d4af6f' : '';
+            });
+        }
+
+        function resetStarHover() {
+            const sel = parseInt(document.getElementById('selectedRating')?.value || '0');
+            document.querySelectorAll('#starPicker .star-pick').forEach(s => {
+                s.style.color = parseInt(s.dataset.value) <= sel ? '#d4af6f' : '';
+            });
+        }
+
+        function pickStar(value) {
+            document.getElementById('selectedRating').value = value;
+            document.querySelectorAll('#starPicker .star-pick').forEach(s => {
+                s.style.color = parseInt(s.dataset.value) <= value ? '#d4af6f' : '';
+            });
+        }
+
+        function renderCommentList(comments, idItem) {
+            const el = document.getElementById('commentList');
+            if (!comments || comments.length === 0) {
+                el.innerHTML = '<p class="no-comments-msg">Aucun commentaire pour cet item.</p>';
+                return;
+            }
+            el.innerHTML = comments.map(c => {
+                const canDel = isAdmin || (isLoggedIn && c.alias === userAlias);
+                return `<div class="comment-item">
+                    <div class="comment-header">
+                        <span class="comment-author">${escapeHtml(c.alias)}</span>
+                        ${renderStars(parseInt(c.evaluation))}
+                        ${canDel ? `<button class="btn-delete-comment" onclick="deleteComment(${parseInt(c.idCommentaire)},${idItem})" title="Supprimer">&times;</button>` : ''}
+                    </div>
+                    <p class="comment-text">${escapeHtml(c.commentaire)}</p>
+                </div>`;
+            }).join('');
+        }
+
+        function loadComments(idItem) {
+            currentModalItemId = idItem;
+            document.getElementById('commentStats').innerHTML = '<p class="loading-comments">Chargement...</p>';
+            document.getElementById('commentList').innerHTML = '';
+            document.getElementById('commentForm').innerHTML = renderCommentForm(idItem);
+
+            const fd = new FormData();
+            fd.append('action', 'get');
+            fd.append('idItem', idItem);
+            fetch('commentaires.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('commentStats').innerHTML = renderCommentStats(data.comments);
+                        renderCommentList(data.comments, idItem);
+                    } else {
+                        document.getElementById('commentStats').innerHTML = '';
+                        document.getElementById('commentList').innerHTML = '<p class="comment-error">Impossible de charger les commentaires.</p>';
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('commentStats').innerHTML = '';
+                    document.getElementById('commentList').innerHTML = '<p class="comment-error">Erreur réseau.</p>';
+                });
+        }
+
+        function submitComment(idItem) {
+            const rating = parseInt(document.getElementById('selectedRating').value);
+            const commentaire = document.getElementById('commentInput').value.trim();
+            const msgEl = document.getElementById('commentFormMsg');
+            if (rating < 1 || rating > 5) { msgEl.textContent = 'Veuillez sélectionner une note (1-5 étoiles).'; return; }
+            if (commentaire === '') { msgEl.textContent = 'Veuillez écrire un commentaire.'; return; }
+            msgEl.textContent = '';
+            const fd = new FormData();
+            fd.append('action', 'add');
+            fd.append('commentaire', commentaire);
+            fd.append('evaluation', rating);
+            fd.append('idItem', idItem);
+            fetch('commentaires.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        loadComments(idItem);
+                    } else {
+                        msgEl.textContent = data.message || 'Erreur lors de la publication.';
+                    }
+                })
+                .catch(() => { msgEl.textContent = 'Erreur réseau.'; });
+        }
+
+        function deleteComment(idCommentaire, idItem) {
+            const fd = new FormData();
+            fd.append('action', 'delete');
+            fd.append('idCommentaire', idCommentaire);
+            fetch('commentaires.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        loadComments(idItem);
+                    } else {
+                        alert(data.message || 'Erreur lors de la suppression.');
+                    }
+                })
+                .catch(() => { alert('Erreur réseau.'); });
         }
     </script>
 </body>

@@ -106,9 +106,13 @@ if ($currentPage === 'panier.php') {
                         <span class="user-profile-divider"></span>
                     <div class="coins">
                         <?php
-                        $gold = (int) ($_SESSION['gold'] ?? 0);
-                        $argent = (int) ($_SESSION['argent'] ?? 0);
-                        $bronze = (int) ($_SESSION['bronze'] ?? 0);
+                        $coins = GetJoueurCoins((int)$_SESSION['user_id']);
+                        $_SESSION['gold']   = $coins['gold'];
+                        $_SESSION['argent'] = $coins['argent'];
+                        $_SESSION['bronze'] = $coins['bronze'];
+                        $gold   = $coins['gold'];
+                        $argent = $coins['argent'];
+                        $bronze = $coins['bronze'];
                         ?>
                         <span class="gold"><?= $gold ?></span>
                         <span class="silver"><?= $argent ?></span>
